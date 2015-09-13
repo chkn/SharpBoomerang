@@ -3,9 +3,10 @@ The easiest way to follow along is to just open this file in Xamarin Studio or
 Visual Studio and use Ctrl+Enter (XS) or Alt+Enter (VS) to execute the following code
 snippets in F# interactive.
 
-The first thing we need to do is to load the SharpBoomerang source code:
+The first thing we need to do is to load the SharpBoomerang library
+ (change the path here if this isn't where it is):
 *)
-#load "boomerang.fs"
+#r "bin/Debug/SharpBoomerang.dll"
 
 (**
 Then, open the SharpBoomerang namespaces to bring its functions into the global scope:
@@ -74,7 +75,7 @@ Let's try that out:
 btitle1 |> parseFromStr "Dr"
 
 // uncomment, should fail:
-//btitle1 |> parseFromStr "Fu"
+//btitle1 |> parseFromStr "Bs"
 
 (**
 Play with the strings passed to `parseFromStr` above and you'll see that it correctly
@@ -115,38 +116,60 @@ You'll note that the type of `btitle2` is now `IChannel<string> -> Context -> Co
 while the type of `btitle1` boomerang was just `Context -> Context`. This is because
 we now have a channel that will expose the successfully parsed string.
 
-We can save that into a mutible destination easily:
+We want our title to be optional, we'll define a `string option` mutable binding
+to hold the value, and a new boomerang, `btitle`, that will optionally parse a title
+into that binding:
 *)
 
-let mutable title = ""
-let btitle = btitle2 ^-> <@ title @>
+let mutable title = None
+let btitle = ~~~btitle2 ^-> <@ title @>
+
+(**
+The `~~~` prefix operator takes a boomerang exposing an `IChannel<'t>` and makes it optional,
+exposing an `IChannel<'t option>`. Then, the result of that is piped, via the `^->` operator
+into a mutable binding. Remember, everything in SharpBoomerang is bidirectional, which is
+why a quoted expression, `<@ title @>` is used to indicate the binding-- when parsing, the
+result will be written there, and when printing, that value will be read.
+
+Let's give it a try and see if it works:
+*)
 
 btitle |> parseFromStr "Dr"
 title // is now "Dr"
 
 btitle |> printToStr // now prints "Dr"
 
-title <- "Mr"
+title <- Some "Mr"
 btitle |> printToStr // now prints "Mr"
+
+btitle |> parseFromStr "Bs"
+title // is now None
 
 (**
 Our title will be followed by an optional dot (.) and then some whitespace,
-so let's define a boomerang for that:
+so let's define a couple helper boomerangs for those:
 *)
 
-let bdotws = ~~(blit %".") >> +.(bws %" ")
+let boptdot = ~~(blit %".") %true
+let bmanyws = +.(bws %" ")
 
 (**
-The `~~` prefix operator indicates that the boomerang is optional to parse but
-should always be printed. If we didn't want the dot when pretty printing, we could
-use the `~~~` operator instead, which still makes the boomerang optional to parse
-but also will not print it.
+....
+*)
 
-The `bws` boomerang matches any single character of whitespace (' ', '\t', '\r', '\n').
-In our case, we don't care what character was actually parsed and we always want to print
-a single space, so we just pass a `ConstChannel` with that. The `+.` prefix operator indicates
-that the boomerang can be greedily matched one or more times, though when printing, it will
-only print once.
+let bdotSpaceIfTitle = ~~(boptdot >> bmanyws) %%(fun r -> r title.IsSome)
+
+(**
+Let's break that down from the inside out: The `bws` boomerang matches any single character
+of whitespace (' ', '\t', '\r', '\n'). In our case, we don't care what character was actually
+parsed and we always want to print a single space, so we just pass a `ConstChannel` with that.
+The `+.` prefix operator indicates that the boomerang can be greedily matched one or more times,
+though when printing, it will only print once. So `(blit %"." >> +.(bws %" "))` composes a boomerang
+that matches a "." followed by one or more whitespace characters. Got it?
+
+Next, the `~~` prefix operator indicates that the boomerang is optional to parse, and exposes an
+`IChannel<bool> to determine if it is printed-- this value is supplied by a function that returns true
+if our `title` binding has a value.
 
 Okay, so let's put this all together into a full parser for our definition of a name:
 *)
@@ -154,8 +177,38 @@ Okay, so let's put this all together into a full parser for our definition of a 
 let mutable firstName = ""
 let mutable lastName = ""
 
-let bname = btitle >> bdotws >> (bstr ^-> <@ firstName @>) >> bws %" " >> (bstr ^-> <@ lastName @>)
+let bname = btitle >> bdotSpaceIfTitle >> (bstr ^-> <@ firstName @>) >> bmanyws >> (bstr ^-> <@ lastName @>)
 
-bname |> parseFromStr "Dr.   B. Corrado"
+bname |> parseFromStr "Mr. Miguel de Icaza"
 
 bname |> printToStr
+
+(**
+Play with the name passed in to `parseFromStr`, and you'll see that this pretty much works:
+the different components are parsed out into the different mutable bindings and then those
+values are also used to pretty print.
+
+Now having a bunch of mutable variables is less than ideal. It'd be nice if we could use
+some immutable data structures like this:
+*)
+
+type Title =
+    | None
+    | Mr
+    | Ms
+    | Dr
+
+type Name = {
+    //Title : Title;
+    First : string;
+    Last  : string;
+    }
+
+let bname2 = boomerang {
+    //let! title = btitle2
+    let! first = bstr
+
+    return first
+}
+
+bname2 %"hello" |> printToStr

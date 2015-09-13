@@ -4,60 +4,12 @@ open System
 open System.IO
 open System.Text
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Quotations.Patterns
-open Microsoft.FSharp.Quotations.DerivedPatterns
 
+/// An exception thrown for parse errors.
 type Expected(str : string) =
     inherit Exception(str)
     new(what, where) = Expected(sprintf "%A at position %i" what where)
-    new(lst : exn list) = Expected("one of: " + String.Join(" OR ", lst |> List.map (fun e -> e.Message)))
-
-type IChannel<'t> =
-    // Reads this IChannel and calls the passed function with the result
-    abstract Read : ('t -> unit) -> unit
-
-    // Writes the 't into this IChannel
-    abstract Write : 't -> unit
-
-// A channel for dealing with constants
-type ConstChannel<'t>(value : 't) =
-    interface IChannel<'t> with
-        member x.Read ret = ret value
-        member x.Write v = ()
-
-// A channel for directly accessing a mutable data source
-type ExprChannel<'t>(expr : Expr<'t>) =
-    static let rec getExpr = function
-    | Value(value, _) -> value
-    | PropertyGet(None, pi, _) -> pi.GetValue(null, null)
-    | PropertyGet(Some(expr), pi, _) -> pi.GetValue(getExpr expr, null)
-    | u -> failwithf "Unsupported Expr: %A" u
-    static let setExpr v = function
-    | Value(value, _) -> () // do nothing so behavior matches ConstChannel
-    | PropertyGet(None, pi, _) -> pi.SetValue(null, v, null)
-    | PropertyGet(Some(expr), pi, _) -> pi.SetValue(getExpr expr, v, null)
-    | u -> failwithf "Unsupported Expr: %A" u
-    interface IChannel<'t> with
-        member x.Read ret = getExpr expr :?> 't |> ret
-        member x.Write v  = setExpr v expr
-
-// A channel for piping values between combinators
-type PipeChannel<'t>(initialValue : 't option) =
-    let mutable value = initialValue
-    let mutable valueCallback = Unchecked.defaultof<Action<'t>>
-    new() = PipeChannel(None)
-    interface IChannel<'t> with
-        member x.Read ret =
-            match value with
-            | Some(v) -> ret v
-            | _ -> valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
-        member x.Write v  =
-            value <- Some v
-            match valueCallback with
-            | null -> ()
-            | callback ->
-                callback.Invoke(v)
-                valueCallback <- null
+    new(lst : exn list) = Expected(String.Join(" OR ", lst |> List.map (fun e -> e.Message)))
 
 type ContextType =
     | Unknown = 0
@@ -66,15 +18,11 @@ type ContextType =
 
 [<AbstractClass>]
 type Context() =
-    let mutable index = 0
     let mutable finished = false
     let finishedChanged = new Event<EventHandler, EventArgs>()
 
-    abstract Index : int with get, set 
-    default x.Index with get() = index and set v = index <- v
-
-    // Indicates to the Context that there is no more to parse/print
-    //  Implementation must be able to be called more than once
+    /// Indicates to the Context that there is no more to parse/print
+    ///  Implementation must be able to be called more than once
     abstract Finished : bool with get, set
     default x.Finished with get() = finished
                         and set v =
@@ -85,21 +33,25 @@ type Context() =
     [<CLIEvent>]
     member x.FinishedChanged = finishedChanged.Publish
 
+    /// The current index in the input (when parsing) or output (when printing)
+    abstract Index : int with get, set
+
+    /// A `ContextType` indicating whether this `Context` does parsing or printing
     abstract Type : ContextType with get
 
-    // Parse or print the literal string passed to this method.
+    /// Parse or print the literal string passed to this method.
     abstract Lit : IChannel<string> -> Context
 
-    // Parse or print an int into/out of the given property Expr
+    /// Parse or print an int into/out of the given property Expr
     abstract Int : IChannel<int> -> Context
 
-    // Parse or print a string until the next parser matches
+    /// Parse or print a string until the next parser matches
     abstract Str : IChannel<string> -> Context
 
-    // Parse or print a string of given length
+    /// Parse or print a string of given length
     abstract NStr : IChannel<int> -> IChannel<string> -> Context
 
-    // Parse or print a character of whitespace
+    /// Parse or print a character of whitespace
     abstract Ws : IChannel<string> -> Context
 
     abstract Dispose : unit -> unit
@@ -110,7 +62,7 @@ type Context() =
 type Boomerang = Context -> Context
 type Boomerang<'t> = IChannel<'t> -> Context -> Context
 
-// Supplies one channel when parsing and another when printing
+/// Supplies one channel when parsing and another when printing
 type ConditionalChannel<'t>(parseCh : IChannel<'t>, printCh : IChannel<'t>, ctx : Context, alwaysWriteToPrint : bool) =
     interface IChannel<'t> with
         member x.Read ret =
@@ -166,33 +118,35 @@ type UntilSuccessContext(wrapped : Context, onFailOrFinished : bool -> bool) as 
 
 type ParseContext(str : string) as this =
     inherit Context()
-    let rewind n = this.Index <- this.Index - n
-    let expected what = raise(Expected(what, this.Index))
+    let mutable index = 0
+    let rewind n = index <- index - n
+    let expected what = raise(Expected(what, index))
     let readChr() =
-        if this.Index >= str.Length then
+        if index >= str.Length then
             this.Finished <- true
             expected "character"
         else
-            let result = str.[this.Index]
-            this.Index <- this.Index + 1
+            let result = str.[index]
+            index <- index + 1
             result
     let readStr n =
-        if this.Index + n > str.Length then
+        if index + n > str.Length then
             this.Finished <- true
             expected "string"
         else
-            let result = str.Substring(this.Index, n)
-            this.Index <- this.Index + n
+            let result = str.Substring(index, n)
+            index <- index + n
             result
     let readInt() =
-        let mutable i = this.Index
+        let mutable i = index
         while i < str.Length && Char.IsDigit(str, i) do
             i <- i + 1
-        let n = i - this.Index
+        let n = i - index
         if n <= 0 then
             if i >= str.Length then this.Finished <- true
             expected "number"
         Int32.Parse(readStr n)
+    override x.Index with get() = index and set v = index <- v
     override x.Type = ContextType.Parsing
     override x.Lit s =
         s.Read(fun v ->
@@ -209,10 +163,11 @@ type ParseContext(str : string) as this =
     override x.Str s =
         let buf = StringBuilder()
         let addChr finished =
-            if finished || x.Index >= str.Length then
+            if finished || index >= str.Length then
                 // if don't have any more parsers, make sure we get the rest of the string
-                if x.Finished && x.Index < str.Length then
-                    buf.Append(str, x.Index, str.Length - x.Index) |> ignore
+                if x.Finished && index < str.Length then
+                    buf.Append(str, index, str.Length - index) |> ignore
+                    index <- str.Length
                 if buf.Length = 0 then
                     expected "string"
                 s.Write(buf.ToString())
@@ -258,12 +213,26 @@ module FSharp =
         buf.ToString ()
 
     let inline mkpipe() = PipeChannel<_>() :> IChannel<_>
+
+    /// Constant channel (cannot be written to)
     let inline (~%) v = ConstChannel(v)
 
-    // Pipes the channel from the left boomerang into the right one
+    /// Constant channel whose value is determined by a function
+    let inline (~%%) fn = { new IChannel<_> with
+                             member x.Read ret = fn ret
+                             member x.Write v = () }
+
+    /// Pipes the channel from the left boomerang into the right one
     let inline (^>>) (l : Boomerang<_>) (r : Boomerang<_>) =
         let pipe = mkpipe()
         l pipe >> r pipe
+
+    (*
+    /// Maps the value of the channel from the left boomerang
+    let inline (>|) (l : Boomerang<'t1>) (t1tot2 : 't1 -> 't2) (t2tot1 : 't2 -> 't1) (ctx : Context) =
+        let pipe = mkpipe()
+        let nctx = l pipe ctx
+    *)
 
     // First tries the left boomerang and then the right
     let inline (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
@@ -281,22 +250,46 @@ module FSharp =
             try r ch ctx with e2 ->
                 raise(Expected([e1; e2]))
 
-    // Optional operator. Outputs when printing
-    let inline (~~) (l : Boomerang) (ctx : Context) =
-        let mark = ctx.Index
-        try l ctx with _ ->
-            ctx.Index <- mark
+    // Optional operator.
+    let inline (~~) (l : Boomerang) (ch : IChannel<bool>) (ctx : Context) =
+        match ctx.Type with
+        | ContextType.Parsing ->
+            let mark = ctx.Index
+            try
+                let nctx = l ctx
+                ch.Write(true)
+                nctx
+            with _ ->
+                ctx.Index <- mark
+                ch.Write(false)
+                ctx
+        | ContextType.Printing ->
+            ch.Read(function
+            | true  -> l ctx |> ignore
+            | false -> ())
             ctx
+        | other -> failwithf "Unsupported ContextType: %O" other
 
-    // Optional operator. Does not output when printing
-    let inline (~~~) (l : Boomerang) (ctx : Context) =
-        let mark = ctx.Index
-        let nctx = try l ctx with _ ->
-                    ctx.Index <- mark
-                    ctx
-        if nctx.Type = ContextType.Printing then
-            nctx.Index <- mark
-        nctx
+    // Channel-propagating optional operator.
+    let inline (~~~) (l : Boomerang<'t>) (ch : IChannel<'t option>) (ctx : Context) =
+        match ctx.Type with
+        | ContextType.Parsing ->
+            let pipe = PipeChannel<'t>()
+            let mark = ctx.Index
+            try
+                let nctx = l pipe ctx
+                ch.Write(pipe.Value)
+                nctx
+            with _ ->
+                ctx.Index <- mark
+                ch.Write(None)
+                ctx
+        | ContextType.Printing ->
+            ch.Read(function
+            | Some v -> l %v ctx |> ignore
+            | None   -> ())
+            ctx
+        | other -> failwithf "Unsupported ContextType: %O" other
 
     // Conservative one or more operator. Continues to match the given boomerang until it fails
     //   or the next one succeeds.
@@ -334,12 +327,11 @@ module FSharp =
 
     type BoomerangBuilder() =
         member x.Bind(b : Boomerang<_>, f : Boomerang<_>) = fun ch -> b ch >> f ch
-        //member x.Bind(b : Boomerang, f : unit -> Boomerang) = b >> f()
-        //member x.Bind(b : Boomerang, f : unit -> Boomerang<_>) = fun ch -> b >> f() ch
+        member x.Bind(b : Boomerang, f : unit -> Boomerang) = b >> f()
+        member x.Bind(b : Boomerang, f : unit -> Boomerang<_>) = fun ch -> b >> f() ch
 
         member x.Zero() = fun (ctx : Context) -> ctx
         member x.Return(v) = x.Zero()
         member x.ReturnFrom(v) = v
-        
 
     let boomerang = BoomerangBuilder()
