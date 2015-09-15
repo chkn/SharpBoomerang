@@ -16,10 +16,10 @@ type IChannel<'t> =
     abstract Write : 't -> unit
 
 /// A read-only channel that is initialized with a constant value.
-type ConstChannel<'t>(value : 't) =
+type ConstChannel<'t>(value) =
     interface IChannel<'t> with
-        member x.Read ret = ret value
-        member x.Write v  = ()
+        member __.Read ret = ret value
+        member __.Write v  = ()
 
 /// A channel for directly accessing a mutable data source, such as a
 ///  mutable `let` binding, or a read-write property.
@@ -35,8 +35,8 @@ type ExprChannel<'t>(expr : Expr<'t>) =
     | PropertyGet(Some(expr), pi, _) -> pi.SetValue(getExpr expr, v, null)
     | u -> failwithf "Unsupported Expr: %A" u
     interface IChannel<'t> with
-        member x.Read ret = getExpr expr :?> 't |> ret
-        member x.Write v  = setExpr v expr
+        member __.Read ret = getExpr expr :?> 't |> ret
+        member __.Write v  = setExpr v expr
 
 /// A channel for piping values between boomerangs. If the channel is read
 ///  and there is no value available, the callback will be saved and called
@@ -60,8 +60,17 @@ type PipeChannel<'t>(initialValue : 't option) =
                 callback.Invoke(v)
                 valueCallback <- null
 
-// Maps one channel type onto another
-type MapChannel<'t1,'t2>(src : IChannel<'t1>, t1tot2 : 't1 -> 't2, t2tot1 : 't2 -> 't1) =
-    interface IChannel<'t2> with
-        member x.Read ret = src.Read(fun v -> v |> t1tot2 |> ret)
-        member x.Write v  = src.Write(v |> t2tot1)
+/// Maps one channel type onto another using an isomorphism
+type BindChannel<'a,'b>(ch : IChannel<'a>, iso : Iso<_,_>) =
+    interface IChannel<'b> with
+        member __.Read ret = ch.Read(fun v -> ret((fst iso) v))
+        member __.Write v = ch.Write((snd iso) v)
+
+[<RequireQualifiedAccess>]
+module Channel =
+
+    let ofValue v = ConstChannel(v)
+    let ofExpr e = ExprChannel(e)
+    let bind iso ch = BindChannel(ch, iso)
+
+

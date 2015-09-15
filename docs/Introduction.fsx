@@ -188,7 +188,7 @@ Play with the name passed in to `parseFromStr`, and you'll see that this pretty 
 the different components are parsed out into the different mutable bindings and then those
 values are also used to pretty print.
 
-Now having a bunch of mutable variables is less than ideal. It'd be nice if we could use
+Now, having a bunch of mutable variables is less than ideal. It'd be nice if we could use
 some immutable data structures like this:
 *)
 

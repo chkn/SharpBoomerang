@@ -223,7 +223,7 @@ module FSharp =
                              member x.Write v = () }
 
     /// Pipes the channel from the left boomerang into the right one
-    let inline (^>>) (l : Boomerang<_>) (r : Boomerang<_>) =
+    let inline (|>>) (l : Boomerang<_>) (r : Boomerang<_>) =
         let pipe = mkpipe()
         l pipe >> r pipe
 
