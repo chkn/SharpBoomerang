@@ -1,12 +1,19 @@
 ﻿(**
-The easiest way to follow along is to just open this file in Xamarin Studio or
-Visual Studio and use Ctrl+Enter (XS) or Alt+Enter (VS) to execute the following code
-snippets in F# interactive.
+Introduction
+============
 
-The first thing we need to do is to load the SharpBoomerang library
- (change the path here if this isn't where it is):
+Hey there! This document will give you a quick crash course in SharpBoomerang.
+
+Follow Along
+------------
+Open this file in Xamarin Studio or Visual Studio and use Ctrl+Enter (XS) or
+Alt+Enter (VS) to execute the following code snippets in F# interactive.
+
+The first thing we need to do is to load the source files we'll be using:
 *)
-#r "bin/Debug/SharpBoomerang.dll"
+#load @"../src/iso.fs"
+#load @"../src/channel.fs"
+#load @"../src/boomerang.fs"
 
 (**
 Then, open the SharpBoomerang namespaces to bring its functions into the global scope:

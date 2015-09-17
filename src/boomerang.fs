@@ -33,26 +33,17 @@ type Context() =
     [<CLIEvent>]
     member x.FinishedChanged = finishedChanged.Publish
 
+    /// Should be used by subclasses when a parse error occurs
+    member x.Expected what = raise(Expected(what, x.Index))
+
     /// The current index in the input (when parsing) or output (when printing)
     abstract Index : int with get, set
 
     /// A `ContextType` indicating whether this `Context` does parsing or printing
     abstract Type : ContextType with get
 
-    /// Parse or print the literal string passed to this method.
-    abstract Lit : IChannel<string> -> Context
-
-    /// Parse or print an int into/out of the given property Expr
-    abstract Int : IChannel<int> -> Context
-
-    /// Parse or print a string until the next parser matches
-    abstract Str : IChannel<string> -> Context
-
-    /// Parse or print a string of given length
-    abstract NStr : IChannel<int> -> IChannel<string> -> Context
-
-    /// Parse or print a character of whitespace
-    abstract Ws : IChannel<string> -> Context
+    /// Parse or print the character from/into the given channel
+    abstract Char : IChannel<char> -> Context
 
     abstract Dispose : unit -> unit
     default x.Dispose() = x.Finished <- true
@@ -107,100 +98,44 @@ type UntilSuccessContext(wrapped : Context, onFailOrFinished : bool -> bool) as 
     override x.Type = wrapped.Type
     override x.Index with get() = wrapped.Index and set v = wrapped.Index <- v
     override x.Finished with get() = wrapped.Finished and set v = wrapped.Finished <- v
-    override x.Lit s = iter (fun () -> wrapped.Lit s)
-    override x.Int i = iter (fun () -> wrapped.Int i)
-    override x.Str s = iter (fun () -> wrapped.Str s)
-    override x.NStr n s = iter (fun () -> wrapped.NStr n s)
-    override x.Ws s = iter (fun () -> wrapped.Ws s)
+    override x.Char c = iter (fun () -> wrapped.Char c)
     override x.Dispose() =
         // Don't call base and set Finished = true in this case
         wrapped.FinishedChanged.RemoveHandler(onFinishedChangedDel)
 
-type ParseContext(str : string) as this =
+type ParseContext(str : string) =
     inherit Context()
     let mutable index = 0
-    let rewind n = index <- index - n
-    let expected what = raise(Expected(what, index))
-    let readChr() =
+    override __.Index with get() = index and set v = index <- v
+    override __.Type = ContextType.Parsing
+    override this.Char c =
         if index >= str.Length then
             this.Finished <- true
             expected "character"
         else
             let result = str.[index]
             index <- index + 1
-            result
-    let readStr n =
-        if index + n > str.Length then
-            this.Finished <- true
-            expected "string"
-        else
-            let result = str.Substring(index, n)
-            index <- index + n
-            result
-    let readInt() =
-        let mutable i = index
-        while i < str.Length && Char.IsDigit(str, i) do
-            i <- i + 1
-        let n = i - index
-        if n <= 0 then
-            if i >= str.Length then this.Finished <- true
-            expected "number"
-        Int32.Parse(readStr n)
-    override x.Index with get() = index and set v = index <- v
-    override x.Type = ContextType.Parsing
-    override x.Lit s =
-        s.Read(fun v ->
-            let str = readStr v.Length
-            if str <> v then
-                rewind v.Length
-                expected v
-            // Do a write too just so our duping friends
-            //  get the value too
-            s.Write(str)
-        )
-        x :> Context
-    override x.Int i = readInt() |> i.Write; x :> Context
-    override x.Str s =
-        let buf = StringBuilder()
-        let addChr finished =
-            if finished || index >= str.Length then
-                // if don't have any more parsers, make sure we get the rest of the string
-                if x.Finished && index < str.Length then
-                    buf.Append(str, index, str.Length - index) |> ignore
-                    index <- str.Length
-                if buf.Length = 0 then
-                    expected "string"
-                s.Write(buf.ToString())
-                false
-            else
-                buf.Append(readChr()) |> ignore
-                true
-        new UntilSuccessContext(x, addChr) :> Context
-    override x.NStr n s = n.Read(fun n -> readStr n |> s.Write); x :> Context
-    override x.Ws s = 
-        let chr = readChr()
-        if Char.IsWhiteSpace(chr) then
-            s.Write(string chr)
-        else
-            expected "whitespace"
-        x :> Context
+            c.Write(result)
+        this :> Context
 
 type PrintContext(writer : StringBuilder) =
     inherit Context()
-    let append (ch : IChannel<_>) = ch.Read(fun v -> ignore(writer.Append(box v)))
-    override x.Type = ContextType.Printing
-    override x.Index with get() = writer.Length and set v = writer.Length <- v
-    override x.Lit s = append s; x :> Context
-    override x.Int i = append i; x :> Context
-    override x.Str s = append s; x :> Context
-    override x.NStr n s =
-        s.Read (fun str ->
-            n.Write str.Length
-            ignore(writer.Append str)
-        )
-        x :> Context
-    override x.Ws s = append s; x :> Context
+    override __.Type = ContextType.Printing
+    override __.Index with get() = writer.Length and set v = writer.Length <- v
+    override this.Char c =
+        c.Read(fun v -> ignore(writer.Append(v)))
+        this :> Context
 
+/// This provides a nice, fluent API for C# people, and gives the canonical
+///  implementations for the F# operators defined after
+type Context with
+
+    member this.Lit (ch : IChannel<string>) =
+        ch.Read(fun str ->
+            let sindex = ref 0
+            this.Char
+
+/// Provides conveniences for using SharpBoomerang from the F# language.
 module FSharp =
 
     let parseFromStr str b =
@@ -212,10 +147,8 @@ module FSharp =
         printer |> b |> ignore
         buf.ToString ()
 
-    let inline mkpipe() = PipeChannel<_>() :> IChannel<_>
-
     /// Constant channel (cannot be written to)
-    let inline (~%) v = ConstChannel(v)
+    let inline (~%) v = Channel.ofValue v
 
     /// Constant channel whose value is determined by a function
     let inline (~%%) fn = { new IChannel<_> with
@@ -224,13 +157,12 @@ module FSharp =
 
     /// Pipes the channel from the left boomerang into the right one
     let inline (|>>) (l : Boomerang<_>) (r : Boomerang<_>) =
-        let pipe = mkpipe()
+        let pipe = PipeChannel()
         l pipe >> r pipe
-
     (*
-    /// Maps the value of the channel from the left boomerang
-    let inline (>|) (l : Boomerang<'t1>) (t1tot2 : 't1 -> 't2) (t2tot1 : 't2 -> 't1) (ctx : Context) =
-        let pipe = mkpipe()
+    /// Maps the value of the channel from the left boomerang using an Iso
+    let inline (>|) (l : Boomerang<_>) (iso : Iso<_,_>) (ctx : Context) =
+        let pipe = PipeChannel()
         let nctx = l pipe ctx
     *)
 
@@ -302,7 +234,7 @@ module FSharp =
         let mutable mark = 0
         let mutable nctx = l ctx
         try
-            if nctx.Type <> ContextType.Printing then
+            if nctx.Type = ContextType.Parsing then
                 while true do
                     mark <- nctx.Index
                     nctx <- l nctx

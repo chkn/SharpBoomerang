@@ -10,16 +10,15 @@ Pros
 ----
 
 - Written in F# 4.0
-- In F#, you can define the grammar in a functional style with combinators,
-   or in a more imperative style with computation expressions. Or mix and match!
-- Some C# love coming soon!
+- In F#, you can define the grammar in a functional style with combinators!
+- C# love coming soon!
 
 Cons
 ----
 
 - Still pretty rough, especially from C#
 - Must put entire text to parse into a `System.String`
-- No tests yet
+- Not many tests yet
 - Not yet optimized for performance
 - Not yet a complete parsing framework
 

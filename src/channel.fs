@@ -6,7 +6,7 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
-/// Represents a bidirectional data source, supporting the Read and Write operations.
+/// Represents a bidirectional data source with Read and Write operations.
 type IChannel<'t> =
     /// Reads this `IChannel` and calls the passed function with the result.
     abstract Read : ('t -> unit) -> unit
@@ -14,6 +14,8 @@ type IChannel<'t> =
     /// Writes a`'t` into this `IChannel`.
     /// If this instance represents a read-only channel, then this method must be a no-op.
     abstract Write : 't -> unit
+
+type channel<'t> = IChannel<'t>
 
 /// A read-only channel that is initialized with a constant value.
 type ConstChannel<'t>(value) =
@@ -46,31 +48,41 @@ type PipeChannel<'t>(initialValue : 't option) =
     let mutable valueCallback = Unchecked.defaultof<Action<'t>>
     new() = PipeChannel(None)
     member x.Value = value
+    member x.Read ret =
+        match value with
+        | Some v -> ret v
+        | None   ->
+            valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
+    member x.Write v =
+        value <- Some v
+        match valueCallback with
+        | null     -> ()
+        | callback ->
+            callback.Invoke(v)
+            valueCallback <- null
     interface IChannel<'t> with
-        member x.Read ret =
-            match value with
-            | Some v -> ret v
-            | None   ->
-                valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
-        member x.Write v  =
-            value <- Some v
-            match valueCallback with
-            | null     -> ()
-            | callback ->
-                callback.Invoke(v)
-                valueCallback <- null
+        member x.Read ret = x.Read ret
+        member x.Write v = x.Write v
 
 /// Maps one channel type onto another using an isomorphism
-type BindChannel<'a,'b>(ch : IChannel<'a>, iso : Iso<_,_>) =
+type MapChannel<'a,'b>(ch : 'a channel, iso : Iso<_,_>) =
     interface IChannel<'b> with
         member __.Read ret = ch.Read(fun v -> ret((fst iso) v))
         member __.Write v = ch.Write((snd iso) v)
 
+/// Collects values from the given wrapped channel until the given function returns Some value,
+///  which becomes the value of this channel.
+type CollectorChannel<'a,'b when 'b :> IEnumerable<'a>>(ch : 'a channel, fn : List<'a> -> 'b option) =
+    interface IChannel<'b> with
+        member __.Write v = for item in v do ch.Write(item)
+        member __.Read ret =
+
+ 
 [<RequireQualifiedAccess>]
 module Channel =
-
-    let ofValue v = ConstChannel(v)
-    let ofExpr e = ExprChannel(e)
-    let bind iso ch = BindChannel(ch, iso)
+    let inline pipe initial = PipeChannel<_>(initial)
+    let inline ofValue v = ConstChannel(v) :> IChannel<_>
+    let inline ofExpr e = ExprChannel(e) :> IChannel<_>
+    let inline map iso ch = MapChannel(ch, iso) :> IChannel<_>
 
 
