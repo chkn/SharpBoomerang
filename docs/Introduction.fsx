@@ -19,7 +19,7 @@ The first thing we need to do is to load the source files we'll be using:
 Then, open the SharpBoomerang namespaces to bring its functions into the global scope:
 *)
 open SharpBoomerang
-open SharpBoomerang.FSharp
+open SharpBoomerang.Combinators
 
 (**
 

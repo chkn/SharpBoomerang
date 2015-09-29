@@ -79,6 +79,7 @@
     <None Include="packages.config" />
     <None Include="build.fsx" />
     <None Include="docs\ChannelsAndIsos.fsx" />
+    <None Include="Playground.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="docs\" />

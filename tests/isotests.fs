@@ -8,14 +8,13 @@ open SharpBoomerang
 [<TestFixture>]
 type IsoTests() =
 
-    let channel iso value = Channel.pipe(Some value) |> Channel.map iso
-    let write value (ch : IChannel<_>) = ch.Write(value); ch
+    let write value (ch : #IChannel<_>) = ch.Write(value); ch
     let assertRead (expected : 't) (str : string) (ch : IChannel<'t>) =
         ch.Read(fun v -> Assert.AreEqual(expected, v, str))
         ch
 
     let testNum v1 v2 iso =
-        let pipe = Channel.pipe (Some 6)
+        let pipe = Channel.pipe() |> write 6
         let map = pipe
                   |> Channel.map iso
                   |> assertRead v1 "#1"
@@ -26,7 +25,7 @@ type IsoTests() =
         |> ignore
 
     let testStr v1 v2 iso =
-        let pipe = Channel.pipe (Some "Hello, World!")
+        let pipe = Channel.pipe() |> write "Hello, World!"
         let map = pipe
                   |> Channel.map iso
                   |> assertRead v1 "#1"
@@ -61,7 +60,7 @@ type IsoTests() =
 
     [<Test>]
     member x.JoinImplicit() =
-        let pipe = Channel.pipe (Some [| "Hello"; "World" |])
+        let pipe = Channel.pipe() |> write [| "Hello"; "World" |]
         let map = pipe
                   |> Channel.map(Iso.ofFn (fun a -> String.Join(", ", a)))
                   |> assertRead "Hello, World" "#1"
@@ -73,7 +72,7 @@ type IsoTests() =
 
     [<Test>]
     member x.ConvertAllImplicit() =
-        let pipe = Channel.pipe (Some [| "a"; "b"; "c" |])
+        let pipe = Channel.pipe() |> write [| "a"; "b"; "c" |]
         let map = pipe
                   |> Channel.map(Iso.ofFn (fun a -> Array.ConvertAll(a, (fun s -> s.ToUpperInvariant()))))
                   |> assertRead [| "A"; "B"; "C" |] "#1"
@@ -85,7 +84,7 @@ type IsoTests() =
 
     [<Test>]
     member x.StrIntArrayConvertAllImplicit() =
-        let pipe = Channel.pipe (Some [| 1; 2; 3 |])
+        let pipe = Channel.pipe() |> write [| 1; 2; 3 |]
         let map = pipe
                   |> Channel.map(Iso.ofFn (fun a -> String.Join("", Array.ConvertAll(a, fun i -> i.ToString()))))
                   |> assertRead "123" "#1"
