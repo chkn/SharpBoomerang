@@ -34,7 +34,7 @@ let bhello = blit %"Hello World!"
 (**
 `blit` is the boomerang for parsing/printing a literal value. To be more specific,
 `blit` reads from its channel and then either parses expecting to find the given string,
-or prints the string. The percent sign prefix operator creates a `ConstChannel` that
+or prints the string. The percent sign (%) prefix operator creates a read-only channel that
 holds a constant value.
 
 On a side note, since it's a drag to always say "parsing/printing," we'll just say "parsing"
@@ -104,32 +104,32 @@ does not execute any of the other boomerangs.
 What we really want to happen is to have some sort of variable to hold the actual
 title that was parsed. Then, when printing, that variable should be read to print
 the correct title again. To do this, we'll use the channel-propagating first-successful-
-parse operator, `<^>`. That operator behaves the same as `<|>`, except that it exposes
+parse operator, `<.>`. That operator behaves the same as `<|>`, except that it exposes
 the successful parse on a channel that you pass to the resulting function. You'll note
-that simply changing `<|>` to `<^>` in our `btitle1` boomerang yields a compiler error.
+that simply changing `<|>` to `<.>` in our `btitle1` boomerang yields a compiler error.
 Passing the `ConstChannel` (with %"..") to our `blit` partially applied it, consuming
 the channel argument. What we really want is to only pass that constant when parsing,
-but to print the value propagated by the `<^>` operator. We can do this with the
-`<?+^` operator:
+but to print the value propagated by the `<.>` operator. We can do this with the
+`<+.` operator:
 *)
 
 let btitle2 =
-    (blit <?+^ %"Mr") <^>
-    (blit <?+^ %"Ms") <^>
-    (blit <?+^ %"Dr")
+    (blit <+. %"Mr") <.>
+    (blit <+. %"Ms") <.>
+    (blit <+. %"Dr")
 
 (**
 You'll note that the type of `btitle2` is now `IChannel<string> -> Context -> Context`
 while the type of `btitle1` boomerang was just `Context -> Context`. This is because
 we now have a channel that will expose the successfully parsed string.
 
-We want our title to be optional, we'll define a `string option` mutable binding
+We want our title to be optional, so we'll define a `string option` mutable binding
 to hold the value, and a new boomerang, `btitle`, that will optionally parse a title
 into that binding:
 *)
 
 let mutable title = None
-let btitle = ~~~btitle2 ^-> <@ title @>
+let btitle = ~~~btitle2 .-> <@ title @>
 
 (**
 The `~~~` prefix operator takes a boomerang exposing an `IChannel<'t>` and makes it optional,
@@ -158,7 +158,7 @@ so let's define a couple helper boomerangs for those:
 *)
 
 let boptdot = ~~(blit %".") %true
-let bmanyws = +.(bws %" ")
+let bmanyws = !+(bws %' ')
 
 (**
 ....
@@ -169,9 +169,9 @@ let bdotSpaceIfTitle = ~~(boptdot >> bmanyws) %%(fun r -> r title.IsSome)
 (**
 Let's break that down from the inside out: The `bws` boomerang matches any single character
 of whitespace (' ', '\t', '\r', '\n'). In our case, we don't care what character was actually
-parsed and we always want to print a single space, so we just pass a `ConstChannel` with that.
-The `+.` prefix operator indicates that the boomerang can be greedily matched one or more times,
-though when printing, it will only print once. So `(blit %"." >> +.(bws %" "))` composes a boomerang
+parsed and we always want to print a single space, so we just pass a constant channel with that.
+The `!+` prefix operator indicates that the boomerang can be greedily matched one or more times,
+though when printing, it will only print once. So `(blit %"." >> !+(bws %" "))` composes a boomerang
 that matches a "." followed by one or more whitespace characters. Got it?
 
 Next, the `~~` prefix operator indicates that the boomerang is optional to parse, and exposes an
@@ -184,7 +184,7 @@ Okay, so let's put this all together into a full parser for our definition of a 
 let mutable firstName = ""
 let mutable lastName = ""
 
-let bname = btitle >> bdotSpaceIfTitle >> (bstr ^-> <@ firstName @>) >> bmanyws >> (bstr ^-> <@ lastName @>)
+let bname = btitle >> bdotSpaceIfTitle >> (bstr .-> <@ firstName @>) >> bmanyws >> (bstr .-> <@ lastName @>)
 
 bname |> parseFromStr "Mr. Miguel de Icaza"
 
@@ -211,11 +211,5 @@ type Name = {
     Last  : string;
     }
 
-let bname2 = boomerang {
-    //let! title = btitle2
-    let! first = bstr
-
-    return first
-}
 
 bname2 %"hello" |> printToStr

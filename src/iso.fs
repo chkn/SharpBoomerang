@@ -12,22 +12,38 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
+/// Convenience for Linq expression trees
+type private LExpr = Expression
+
+/// Helper functions
+[<AutoOpen>]
+module private Helpers = 
+    let inline starts start (str : string) =
+        str.StartsWith(start, StringComparison.Ordinal)
+
+    let inline startsEither start1 start2 (str : string) =
+        str |> starts start1 || str |> starts start2
+
+    let inline toDict keys values =
+        (List.zip keys values).ToDictionary(fst, snd)
+
+    type Expression with
+        static member Lambda(e:Expression<_>) = e
+
+(*
+The following isomorphism type, Iso, is borrowed from,
+and thus compatible with, Aether (https://github.com/xyncro/aether).
+*)
+
 /// Total, one-to-one isomorphism of a <> b
 type Iso<'a,'b> = ('a -> 'b) * ('b -> 'a)
 
-// Convenience
-type private LExpr = Expression
-module private LExprEx = 
-    type Expression with
-        static member Lambda(e:Expression<_>) = e
-open LExprEx
 
 [<AbstractClass; Sealed>]
 type Iso private () =
-    // Some helpers:
-    static let starts start (str : string) = str.StartsWith(start, StringComparison.Ordinal)
-    static let startsEither start1 start2 (str : string) = str |> starts start1 || str |> starts start2
-    static let toDict keys values = (List.zip keys values).ToDictionary(Func<_,_>(fst), Func<_,_>(snd))
+
+    /// Represents an Iso that only supports a single direction transformation
+    static member oneWay(fn : 'a -> 'b) : Iso<_,_> = fn, (fun _ -> failwith "Reverse transformation not supported")
 
     /// Given a simple function, `'a -> 'b`, attempts to derive the inverse implicitly
     static member ofFn([<ReflectedDefinition(true)>] expr : Expr<('a -> 'b)>) : Iso<_,_> =
@@ -52,8 +68,8 @@ type Iso private () =
                             let gt = t.GetGenericTypeDefinition()
                             let reverse() =
                                 let ga = t.GetGenericArguments()
-                                let oa = args |> List.rev
-                                gt.MakeGenericType(ga |> Array.rev), oa,
+                                let oa = List.rev args
+                                gt.MakeGenericType(Array.rev ga), oa,
                                 oa |> List.map (fun a -> LExpr.Parameter((if a.Type = ga.[0] then ga.[1] else a.Type), a.Name))
 
                             if gt = typedefof<Func<_,_>> then reverse() else

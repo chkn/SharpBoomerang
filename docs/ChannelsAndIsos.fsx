@@ -55,7 +55,7 @@ By themselves, isos aren't that useful, but they become very powerful when you
 combine them with channels. Here's a more complex example to whet our appetite:
 *)
 
-let raw = Some "abc" |> Channel.pipe // create a channel that initially contains "abc"
+let raw = Channel.pipeWith "abc" // create a channel that initially contains "abc"
 let map = raw |> Channel.map(Iso.ofFn (fun str -> str.ToUpperInvariant()))
 
 raw.Read(printfn "%A") // prints "abc"

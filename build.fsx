@@ -5,11 +5,11 @@ open FSharp.Literate
 open System.IO
 
 // Paths
-let top = __SOURCE_DIRECTORY__
-let fsharpFormatting = Path.Combine(top, "packages", "FSharp.Formatting.2.10.3")
-let docs = Path.Combine(top, "docs")
+let fsharpFormatting = Path.Combine(__SOURCE_DIRECTORY__, "packages", "FSharp.Formatting.2.10.3")
 let template = Path.Combine(fsharpFormatting, "literate", "templates", "template-project.html")
-let output = Path.Combine(top, "docs-html")
+
+let docs = Path.Combine(__SOURCE_DIRECTORY__, "docs")
+let output = Path.Combine(__SOURCE_DIRECTORY__, "docs-html")
 
 let projInfo =
   [
