@@ -27,13 +27,15 @@ type PipeChannel<'t>() =
     member __.Value = value
     member __.Read ret =
         match value with
-        | Some v -> ret v
+        | Some v ->
+            ret v
+            value <- None
         | None   ->
             valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
     member __.Write v =
-        value <- Some v
         match valueCallback with
-        | null     -> ()
+        | null     ->
+            value <- Some v
         | callback ->
             callback.Invoke(v)
             valueCallback <- null
@@ -182,3 +184,8 @@ module Channel =
                 member __.Read ret = ch.Read(fun v -> f1 v |> ret)
                 member __.Write v = ch.Write(f2 v)
         }
+
+    /// Maps the given channel into a quoted string
+    let quote<'t when 't :> IConvertible> (ch : IChannel<'t>) =
+        ch
+        |> map ((fun v -> sprintf "\"%O\"" v), (fun str -> Convert.ChangeType(str.Trim('"'), typeof<'t>) |> unbox))

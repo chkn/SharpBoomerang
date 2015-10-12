@@ -32,19 +32,19 @@ type BoomerangTests() =
     member __.CharEndOfStr() = (bchr %'h' >> bend) |> parseFromStr "hello"
 
     [<Test>]
-    member __.Lit() = testCh (blit <+. %"hello") "hello" "hello"
+    member __.LitCh() = testCh (blit <?? %"hello") "hello" "hello"
 
     [<Test>]
-    member __.LitMult() = testSuccess (blit %"foo" @* %3) "foofoofoo"
+    member __.LitMult() = testSuccess (%3 |> btimes (blit %"foo")) "foofoofoo"
 
     [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"foo\" at position 6")>]
-    member __.LitMultExpected() = testSuccess (blit %"foo" @* %3) "foofoo"
+    member __.LitMultExpected() = testSuccess (%3 |> btimes (blit %"foo")) "foofoo"
 
     [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"hello\" at position 0")>]
-    member __.LitExpectedCharacter() = testCh (blit <+. %"hello") "hello" "he"
+    member __.LitExpectedCharacter() = testSuccess (blit %"hello") "he"
 
     [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"hello\" at position 0")>]
-    member __.LitExpectedE() = testCh (blit <+. %"hello") "hello" "holla"
+    member __.LitExpectedE() = testSuccess (blit %"hello") "holla"
 
     [<Test>]
     member __.NStr() = testCh (bnstr %5) "hello" "hello"
@@ -57,7 +57,7 @@ type BoomerangTests() =
 
     [<Test>]
     member __.ChPropOneOrMore() =
-        testCh (!+.(bchr) >>| ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "hello"
+        testCh (!+.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "hello"
 
     [<Test>]
     member __.PInt() = testCh bpint 123 "123"
@@ -69,3 +69,19 @@ type BoomerangTests() =
     [<Test>]
     member __.PIntToNStr() =
         testCh (bpint |>>. bnstr) "hello" "5hello"
+
+    [<Test>]
+    member __.PIntToMult() =
+        testSuccess (bpint ??> %3 |>> btimes (blit %"foo")) "3foofoofoo"
+
+    [<Test>]
+    member __.NGAtEnd() =
+        testCh (+.bdigit) [| '5'; '5'; '5' |] "555"
+
+    [<Test>]
+    member __.NGAtEndExplicit() =
+        testCh (+.bdigit .>> bend) [| '5'; '5'; '5' |] "555"
+
+    [<Test>]
+    member __.Str() =
+        testCh (bstr .>> blit %"1") "nirb" "nirb1"

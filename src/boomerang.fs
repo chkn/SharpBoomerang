@@ -35,8 +35,9 @@ type ContextType =
 type Context(contextType : ContextType, channel : ICharChannel) =
     member this.Type = contextType
     member this.Channel = channel
-    member this.Expect(bln, what : string) = if not bln then raise(Expected(what, channel.Index))
-    abstract member Connect : IChannel<'t> * IChannel<'t> -> Context
+    abstract Expect : (unit -> bool) * string -> unit
+    default this.Expect(bln, what) = if not(bln()) then raise(Expected(what, channel.Index))
+    abstract Connect : IChannel<'t> * IChannel<'t> -> Context
     default this.Connect(l, r) =
         let index = channel.Index
         try
@@ -49,23 +50,10 @@ type Context(contextType : ContextType, channel : ICharChannel) =
         //  - we assume any more specific exception is unexpected and don't catch it.
         with e when e.GetType() = typeof<Exception> ->
             raise(Expected(e, index))
-
-type UntilSuccessContext(wrapped : Context, fn : Context -> Context, onFinish : unit -> unit) =
-    inherit Context(wrapped.Type, wrapped.Channel)
-    new(wrapped, fn) = UntilSuccessContext(wrapped, fn, fun () -> ())
-    override this.Connect(l, r) =
-        let mutable ctx = wrapped
-        let mutable finished = false
-        while not finished do
-            use mark = this.Channel.Mark()
-            try
-                base.Connect(l, r) |> ignore
-                finished <- true
-            with _ ->
-                mark.Rewind()
-                ctx <- fn ctx
-        onFinish()
-        ctx
+    abstract Dispose : unit -> unit
+    default this.Dispose() = ()
+    interface IDisposable with
+        member this.Dispose() = this.Dispose()
 
 type Boomerang = Context -> Context
 type Boomerang<'t> = 't channel -> Boomerang
@@ -108,10 +96,11 @@ module Combinators =
     let Printing = ContextType.Printing
 
     let parseFromStr str (b : Boomerang) =
-        Context(Parsing, StringInputChannel(str)) |> b |> ignore
+        use __ = new Context(Parsing, StringInputChannel(str)) |> b
+        ()
     let printToStr (b : Boomerang) =
         let buf = StringBuilder()
-        Context(Printing, StringOutputChannel(buf)) |> b |> ignore
+        use __ = new Context(Printing, StringOutputChannel(buf)) |> b
         buf.ToString ()
 
     // Channel operators:
@@ -119,7 +108,7 @@ module Combinators =
     /// Constant channel (cannot be written to)
     let inline (~%) v = Channel.ofValue v
 
-    /// Constant channel whose value is determined by a function
+    /// Read-only channel whose value is determined by a function
     let inline (~%%) fn = { new IChannel<_> with
                              member x.Read ret = fn ret
                              member x.Write v = () }
@@ -150,7 +139,7 @@ module Combinators =
     let inline (>>.) (l : Boomerang) (r : Boomerang<_>) ch = l >> r ch
 
     /// Maps the value of the channel from the left boomerang using an Iso
-    let inline (>>|) (l : Boomerang<_>) (f1, f2) ch = l (Channel.map (f2, f1) ch)
+    let inline (>>%) (l : Boomerang<_>) (f1, f2) ch = l (Channel.map (f2, f1) ch)
 
     /// First tries the left boomerang and then the right
     let inline (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
@@ -209,16 +198,57 @@ module Combinators =
             ctx
         | _ -> failwith "Unknown context type"
 
+    type private NonGreedyRepeatContext(wrapped : Context, fn : Context -> Context, onFinish : unit -> unit) =
+        inherit Context(wrapped.Type, wrapped.Channel)
+        new(wrapped, fn) = new NonGreedyRepeatContext(wrapped, fn, fun _ -> ())
+        override this.Expect(bln, what) =
+            let mutable ctx = wrapped
+            let mutable finished = bln()
+            while not finished do
+                ctx <- fn ctx
+                finished <- bln()
+        override this.Connect(l, r) =
+            let mutable ctx = wrapped
+            let mutable finished = false
+            while not finished do
+                use mark = this.Channel.Mark()
+                try
+                    base.Connect(l, r) |> ignore
+                    finished <- true
+                with _ ->
+                    mark.Rewind()
+                    ctx <- fn ctx
+            onFinish()
+            ctx
+        override this.Dispose() =
+            // Make sure we capture any more at the end
+            let mutable ctx = wrapped
+            try
+                // FIXME: protect against infinite loop
+                while true do
+                    ctx <- fn ctx
+            with _ -> ()
+            onFinish()
+            wrapped.Dispose()
+
     /// Non-greedy one or more operator. Continues to match the given boomerang until
     ///  it fails or the next one succeeds. When printing, the boomerang is called once.
-    let inline (~+) (l : Boomerang) (ctx : Context) = UntilSuccessContext(l ctx, l) :> Context
+    let (~+) (l : Boomerang) (ctx : Context) = new NonGreedyRepeatContext(l ctx, l) :> Context
 
     /// Channel-propagating non-greedy one or more operator. Continues to match the given
     ///  boomerang until it fails or the next one succeeds.
-    let inline (~+.) (l : Boomerang<'t>) (matched : IChannel<'t seq>) ctx =
+    let (~+.) (l : Boomerang<'t>) (matched : IChannel<'t seq>) (ctx : Context) =
         let collector = Channel.decompose (fun _ -> false) matched
         let b = l collector
-        UntilSuccessContext(b ctx, b, fun () -> collector.Flush()) :> Context
+        match ctx.Type with
+        | Parsing  ->
+            new NonGreedyRepeatContext(b ctx, b, fun _ -> collector.Flush()) :> Context
+        | Printing ->
+            let mutable nctx = b ctx
+            while collector.Count > 0 do
+                nctx <- b nctx
+            nctx
+        | _ -> failwith "Unknown context type"
 
     /// Greedy one or more operator. Continues to match the given boomerang until it fails.
     ///  When printing, prints one.
@@ -254,32 +284,26 @@ module Combinators =
             collector.Flush()
         nctx
 
-    /// Multiplication operator. Repeats the boomerang a given number of times
-    let ( @* ) (l : Boomerang) (cnt : int channel) (ctx : Context) =
-        let nctx = ref ctx
-        cnt.Read(fun n ->
-            for __ = 1 to n do
-                nctx := l !nctx
-        )
-        !nctx
-
-    /// Channel-propagating multiplication operator. Repeats the boomerang a given number of times
-    //let ( @*. ) (l : Boomerang<'t>) (cnt : int channel) (ch : IChannel<'t array>) (ctx : Context) =
-    //    Channel.decompose cnt 
-
-
-    /// Pipes the first channel when parsing, second when printing.
+    /// Left conditional operator. Pipes the first channel when parsing, second when printing.
     ///  Writes go to both channels.
-    let (<+.) (l : Boomerang<_>) (parseCh : IChannel<_>) (printCh : IChannel<_>) (ctx : Context) =
-        l { new IChannel<'t> with
-            member __.Write v  = parseCh.Write v; printCh.Write v
-            member __.Read ret =
-                match ctx.Type with
-                | Parsing  -> parseCh.Read ret
-                | Printing -> printCh.Read ret
-                | _ -> failwith "Unknown context type"
+    let (<??) (l : Boomerang<_>) (parseCh : IChannel<_>) (printCh : IChannel<_>) (ctx : Context) =
+        l {
+            new IChannel<'t> with
+                member __.Write v  = parseCh.Write v; printCh.Write v
+                member __.Read ret =
+                    match ctx.Type with
+                    | Parsing  -> parseCh.Read ret
+                    | Printing -> printCh.Read ret
+                    | _ -> failwith "Unknown context type"
         } ctx
 
+    /// Right conditional operator. Reads come from first channel, writes go to second channel
+    let (??>) (l : Boomerang<_>) (readCh : IChannel<_>) (writeCh : IChannel<_>) (ctx : Context) =
+        l {
+            new IChannel<'t> with
+                member __.Write v  = writeCh.Write v
+                member __.Read ret = readCh.Read(fun v -> writeCh.Write(v); ret v)
+        } ctx
 
     /// Pipes the channel from the left boomerang into the quoted variable
     let inline (.->) (l : Boomerang<_>) (r : Expr<_>) = Channel.ofExpr r |> l
@@ -307,7 +331,7 @@ module Combinators =
     /// A boomerang to expect the end of the input when parsing
     let inline bend (ctx : Context) =
         if ctx.Type = Parsing then
-            ctx.Expect(ctx.Channel.EndOfStream, "<end of stream>")
+            ctx.Expect((fun _ -> ctx.Channel.EndOfStream), "<end of stream>")
         ctx
 
     /// Boomerangs a single character
@@ -322,15 +346,33 @@ module Combinators =
     /// Boomerangs a given number of characters into an array
     let bnchrs n chrs = Channel.collect n <-> chrs
 
+    /// Boomerangs the given boomerang a given number of times
+    let btimes (l : Boomerang) (times : int channel) (ctx : Context) =
+        let nctx = ref ctx
+        times.Read(fun n ->
+            for __ = 1 to n do
+                nctx := l !nctx
+        )
+        !nctx
+
+    /// Boomerangs the given boomerang a given number of times into an array
+    //let barray (l : Boomerang<'t>) (times : int channel) (ch : IChannel<'t array>) (ctx : Context) =
+    //    ch |> Channel.decompose (fun lst -> lst
+
     /// Boomerangs a string of a given length
-    let bnstr n = n |> bnchrs >>| ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
+    let bnstr n =
+        n
+        |> bnchrs
+         >>% ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
 
     /// Boomerangs a literal string
     let blit (str : string channel) =
         let n = str |> Channel.map (Iso.oneWay (fun s -> s.Length)) |> Channel.toReadOnly
-        str |> Channel.expect str |> bnstr n <?> (str |> Channel.map (Iso.oneWay (fun s -> "\"" + s + "\"")))
+        str
+        |> Channel.expect str
+        |> bnstr n <?> Channel.quote str
 
-    /// Greedily boomerangs a positive integer (sequence of digits)
+    /// Boomerangs a positive integer (greedy sequence of digits)
     let bpint : Boomerang<int> =
         let rec decomp i = seq {
             let m, r = Math.DivRem(i, 10)
@@ -338,7 +380,7 @@ module Combinators =
             if m > 0 then
                 yield! decomp m
         }
-        !+.bdigit >>| (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
+        !+.bdigit >>% (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
  
-    //let inline bstr (ch : string channel) = Channel.collect (fun chr ->
-  
+    let bstr : Boomerang<string> =
+        +.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))
