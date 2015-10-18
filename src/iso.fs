@@ -22,12 +22,15 @@ module private Helpers =
         str.StartsWith(start, StringComparison.Ordinal)
 
     let inline startsEither start1 start2 (str : string) =
-        str |> starts start1 || str |> starts start2
+           str |> starts start1
+        || str |> starts start2
 
     let inline toDict keys values =
         (List.zip keys values).ToDictionary(fst, snd)
 
     type Expression with
+        // Lambda from F# func, quoted automatically by the compiler
+        //  See http://stackoverflow.com/a/23146624/578190
         static member Lambda(e:Expression<_>) = e
 
 (*

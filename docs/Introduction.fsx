@@ -3,6 +3,11 @@
 
 Hey there! This document will give you a quick crash course in SharpBoomerang.
 
+SharpBoomerang is a library for specifying a grammar for both a parser and a
+pretty printer simultaneously. Every construct in SharpBoomerang is designed
+to be bidirectional. Its design is not purely functional. It is not thread
+safe.
+
 ## Follow Along
 
 Open this file in Xamarin Studio or Visual Studio and use Ctrl+Enter (XS) or
@@ -35,19 +40,18 @@ parsing/printing a literal value. To be more specific, `blit` reads from its cha
 then either parses expecting to find the given string, or prints the string. The percent
 sign (%) prefix operator creates a read-only channel that holds a constant value.
 
-On a side note, since it's a drag to always say "parsing/printing," we'll just say "parsing"
-from now on, but all constructs can do either.
+On a side note, instead of "parsing/printing," we'll just say "parsing" from now on,
+but all constructs can do either.
 
-Granted, this example is a bit boring, but let's see how we can parse "Hello World!"
-using that boomerang:
+As a simple example, let's see how we can parse "Hello World!" using that boomerang:
 *)
 
 
 bhello |> parseFromStr "Hello World!"
 
 (**
-Run that annnddd... nothing happens. But if you try changing the "Hello World!" string
-passed to `parseFromStr` you'll get an exception because the parse failed.
+Run that annnddd... nothing happens. However, if you try changing the "Hello World!" string
+passed to `parseFromStr`, you'll get an exception because the parse failed.
 
 Just for completeness, here's the printer for that:
 *)
@@ -64,7 +68,7 @@ parse two strings separated by whitespace, possibly with a title beforehand.
 ### Parsing a Choice
 
 We've already used the `blit` boomerang to parse a literal string. We can use
-multiple `blit`s separated by the first-successful-parse operator, `<|>` to
+multiple `blit`s separated by the first-successful-parse operator, `<|>`, to
 try to parse a few different titles:
 *)
 
@@ -105,10 +109,10 @@ does not execute any of the other boomerangs.
 
 What we really want to happen is to have some sort of variable to hold the actual
 title that was parsed. Then, when printing, that variable should be read to print
-the correct title again. To do this, we'll use the channel-propagating first-successful-
-parse operator, `<.>`. That operator behaves the same as `<|>`, except that it exposes
+the correct title again. To do this, we'll use the channel-propagating first-successful-parse
+operator, `<.>`. That operator behaves the same as `<|>`, except that it exposes
 the successful parse on a channel that you pass to the resulting function. You'll note
-that simply changing `<|>` to `<.>` in our `btitlechoice` boomerang yields a compiler error.
+that simply changing `<|>` to `<.>` in our `btitle` boomerang yields a compiler error.
 Passing a channel (with %"..") to our `blit` partially applied it, consuming the
 channel argument. What we really want is to only pass that constant when parsing,
 but to print the value propagated by the `<.>` operator. We can do this with the
@@ -134,9 +138,9 @@ let btitle = ~~~btitle .-> <@ title @>
 
 (**
 The `~~~` prefix operator takes a boomerang exposing an `IChannel<'t>` and makes it optional,
-exposing an `IChannel<'t option>`. Then, the result of that is piped, via the `.->` operator
+exposing an `IChannel<'t option>`. Then, the result of that is piped, via the `.->` operator,
 into a mutable binding. Remember, everything in SharpBoomerang is bidirectional, which is
-why a quoted expression, `<@ title @>` is used to indicate the binding-- when parsing, the
+why a quoted expression, `<@ title @>` is used to indicate the binding -- when parsing, the
 result will be written there, and when printing, that value will be read.
 
 Let's give it a try and see if it works:
@@ -169,7 +173,7 @@ so we just pass a read-only channel with that. The `!+` prefix operator indicate
 be greedily matched one or more times, though when printing, it will only print once.
 
 Next, the `~~` prefix operator indicates that the boomerang is optional to parse, and exposes an
-`IChannel<bool> to determine if it is printed (to which we simply supply a constant `true`).
+`IChannel<bool>` to determine if it is printed (to which we simply supply a constant `true`).
 
 Okay, so let's put this all together into a full parser for our definition of a name:
 *)
@@ -200,8 +204,11 @@ type Title =
     | Dr
 
 type Name = {
-    //Title : Title;
+    Title : Title;
     First : string;
     Last  : string;
     }
 
+(**
+To be continued...
+*)

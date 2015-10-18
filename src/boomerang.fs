@@ -5,6 +5,7 @@ open System.IO
 open System.Text
 open System.Collections.Generic
 open Microsoft.FSharp.Quotations
+open Microsoft.FSharp.Reflection
 
 [<AllowNullLiteral>]
 type IMark =
@@ -138,7 +139,7 @@ module Combinators =
     /// Sequentially calls left and right, propagating the right channel
     let inline (>>.) (l : Boomerang) (r : Boomerang<_>) ch = l >> r ch
 
-    /// Maps the value of the channel from the left boomerang using an Iso
+    /// Maps the value of the channel from the left boomerang using an `Iso`
     let inline (>>%) (l : Boomerang<_>) (f1, f2) ch = l (Channel.map (f2, f1) ch)
 
     /// First tries the left boomerang and then the right
@@ -149,6 +150,20 @@ module Combinators =
             try r ctx with e2 ->
                 raise(Expected([e1; e2]))
 
+    /// Tries each boomerang in order (plural of <|> operator)
+    let bchoice (lst : Boomerang list) (ctx : Context) =
+        let mutable exns = []
+        use mark = ctx.Channel.Mark()
+        let rec iter = function
+        | hd :: tl ->
+            try hd ctx with e ->
+                exns <- e :: exns
+                mark.Rewind()
+                iter tl
+        | [] ->
+            raise(Expected(exns))
+        iter lst
+
     /// First tries the left boomerang and then the right, propagating the channel
     let inline (<.>) (l : Boomerang<_>) (r : Boomerang<_>) (ch : IChannel<_>) (ctx : Context) =
         use mark = ctx.Channel.Mark()
@@ -156,6 +171,20 @@ module Combinators =
             mark.Rewind()
             try r ch ctx with e2 ->
                 raise(Expected([e1; e2]))
+
+    /// Tries each boomerang in order, propagating the channel (plural of <.> operator)
+    let bfirst (lst : Boomerang<_> list) (ch : IChannel<_>) (ctx : Context) =
+        let mutable exns = []
+        use mark = ctx.Channel.Mark()
+        let rec iter = function
+        | hd :: tl ->
+            try hd ch ctx with e ->
+                exns <- e :: exns
+                mark.Rewind()
+                iter tl
+        | [] ->
+            raise(Expected(exns))
+        iter lst
 
     /// Optional operator.
     let (~~) (l : Boomerang) (matched : IChannel<bool>) (ctx : Context) =
@@ -363,7 +392,7 @@ module Combinators =
     let bnstr n =
         n
         |> bnchrs
-         >>% ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
+        >>% ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
 
     /// Boomerangs a literal string
     let blit (str : string channel) =
@@ -382,5 +411,23 @@ module Combinators =
         }
         !+.bdigit >>% (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
  
+    /// Boomerangs an arbitrary length string (non-greedy sequence of characters)
     let bstr : Boomerang<string> =
         +.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))
+
+    /// Boomerangs a discriminated union case that takes no arguments
+    let bdu<'a> : Boomerang<'a> =
+        let cases = FSharpType.GetUnionCases typeof<'a>
+        let toString (x : 'a) = fst(FSharpValue.GetUnionFields(x, typeof<'a>)).Name
+        let fromString s =
+            cases
+            |> Array.pick (fun case ->
+                if case.Name = s then
+                    Some(FSharpValue.MakeUnion(case,[||]) :?> 'a)
+                else
+                    None)
+        cases
+        |> Array.map (fun case -> blit <?? (Channel.ofValue case.Name))
+        |> List.ofArray
+        |> bfirst
+        >>% (fromString, toString)

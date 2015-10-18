@@ -6,6 +6,11 @@ open NUnit.Framework
 open SharpBoomerang
 open SharpBoomerang.Combinators
 
+type Title =
+    | Mr
+    | Ms
+    | Dr
+
 [<TestFixture>]
 type BoomerangTests() =
 
@@ -35,7 +40,7 @@ type BoomerangTests() =
     member __.LitCh() = testCh (blit <?? %"hello") "hello" "hello"
 
     [<Test>]
-    member __.LitMult() = testSuccess (%3 |> btimes (blit %"foo")) "foofoofoo"
+    member __.LitTimes() = testSuccess (%3 |> btimes (blit %"foo")) "foofoofoo"
 
     [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"foo\" at position 6")>]
     member __.LitMultExpected() = testSuccess (%3 |> btimes (blit %"foo")) "foofoo"
@@ -85,3 +90,6 @@ type BoomerangTests() =
     [<Test>]
     member __.Str() =
         testCh (bstr .>> blit %"1") "nirb" "nirb1"
+ 
+    [<Test>]
+    member __.DU() = testCh (bdu<Title>) Ms "Ms"

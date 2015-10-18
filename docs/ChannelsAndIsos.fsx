@@ -67,6 +67,6 @@ raw.Read(printfn "%A") // prints "def"
 map.Read(printfn "%A") // prints "DEF"
 
 (**
-Channels and isos are the powerful combination SharpBoomerang uses to achieve its
+Channels and isos are a couple of the powerful tools SharpBoomerang uses to achieve its
 bidirectionality.
 *)
