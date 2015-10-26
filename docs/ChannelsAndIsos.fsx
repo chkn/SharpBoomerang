@@ -16,8 +16,9 @@ In SharpBoomerang, isomorphisms are represented by this type:
 
     type Iso<'a,'b> = ('a -> 'b) * ('b -> 'a)
 
-That type and other functions for working with it is defined in iso.fs:
+That type and other functions for working with it is defined in iso.fs. It depends on some utilities in util.fs.
 *)
+#load @"../src/util.fs"
 #load @"../src/iso.fs"
 
 (**

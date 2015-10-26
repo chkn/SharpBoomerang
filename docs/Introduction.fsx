@@ -15,6 +15,7 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.
 
 The first thing we need to do is to load the source files we'll be using:
 *)
+#load @"../src/util.fs"
 #load @"../src/iso.fs"
 #load @"../src/channel.fs"
 #load @"../src/boomerang.fs"

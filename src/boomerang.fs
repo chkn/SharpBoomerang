@@ -413,7 +413,7 @@ module Combinators =
  
     /// Boomerangs an arbitrary length string (non-greedy sequence of characters)
     let bstr : Boomerang<string> =
-        +.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))
+        +.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str.ToCharArray() :> char seq))
 
     /// Boomerangs a discriminated union case that takes no arguments
     let bdu<'a> : Boomerang<'a> =

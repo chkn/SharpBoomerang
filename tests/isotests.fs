@@ -71,10 +71,10 @@ type IsoTests() =
         |> ignore
 
     [<Test>]
-    member x.ConvertAllImplicit() =
+    member x.ArrayMapImplicit() =
         let pipe = Channel.pipe() |> write [| "a"; "b"; "c" |]
         let map = pipe
-                  |> Channel.map(Iso.ofFn (fun a -> Array.ConvertAll(a, (fun s -> s.ToUpperInvariant()))))
+                  |> Channel.map(Iso.ofFn (fun a -> Array.map (fun (s : string) -> s.ToUpperInvariant()) a))
                   |> assertRead [| "A"; "B"; "C" |] "#1"
                   |> write [| "X"; "Y"; "Z" |]
         Assert.AreEqual([| "x"; "y"; "z" |], pipe.Value.Value, "#2")
@@ -83,10 +83,10 @@ type IsoTests() =
         |> ignore
 
     [<Test>]
-    member x.StrIntArrayConvertAllImplicit() =
+    member x.StrIntArrayMapImplicit() =
         let pipe = Channel.pipe() |> write [| 1; 2; 3 |]
         let map = pipe
-                  |> Channel.map(Iso.ofFn (fun a -> String.Join("", Array.ConvertAll(a, fun i -> i.ToString()))))
+                  |> Channel.map(Iso.ofFn (fun a -> String.Join("", Array.map (fun i -> i.ToString()) a)))
                   |> assertRead "123" "#1"
                   |> write "456"
         Assert.AreEqual([| 4; 5; 6 |], pipe.Value.Value, "#2")

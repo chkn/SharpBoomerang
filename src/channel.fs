@@ -186,6 +186,10 @@ module Channel =
         }
 
     /// Maps the given channel into a quoted string
-    let quote<'t when 't :> IConvertible> (ch : IChannel<'t>) =
+    let quote<'t
+     #if !NETFX_CORE
+     when 't :> IConvertible
+     #endif
+     > (ch : IChannel<'t>) =
         ch
         |> map ((fun v -> sprintf "\"%O\"" v), (fun str -> Convert.ChangeType(str.Trim('"'), typeof<'t>) |> unbox))

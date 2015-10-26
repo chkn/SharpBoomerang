@@ -20,8 +20,14 @@ Considerations
 - Not yet optimized for performance
 - Not yet a complete parsing framework
 
-Dragons!
---------
+Requirements
+------------
+
+### Visual Studio
+
+You'll need Visual Studio 2015 -- earlier versions will not work. Just load SharpBoomerang.sln and go!
+
+### Mono
 
 If you're using Mono, you'll need to build and install F# 4.0 from source, as Mono doesn't package it yet. Thankfully, this is fairly straightforward:
 
@@ -29,13 +35,22 @@ If you're using Mono, you'll need to build and install F# 4.0 from source, as Mo
 2. From the checkout, do the standard, `./configure && make`
 3. Install it into your system Mono with `sudo make install`
 
-Also note that running `Introduction.fsx` in FSI currently crashes Mono.
+After that you can load SharpBoomerang.sln in Xamarin Studio. The highlighting and code sense won't recognize F# 4.0 features, but compiling, running the tests, F# interactive, etc. should all work.
+
+Note that running `Introduction.fsx` in F# interactive currently crashes Mono.
 
 Docs
 ----
 
 An introduction in F# can be found in `Introduction.fsx`. The HTML docs can be built by running `build.fsx`.
 
+Tests
+-----
+
+The NUnit tests are under the `tests` directory. The tests should be runnable from the Unit Tests pad in Xamarin Studio or the Test Explorer in Visual Studio.
+
+
 Contributions, Feedback, etc.
 -----------------------------
+
 All welcome! Feel free to file PRs or Issues. Also consider poking me on Twitter @chknofthescene, as I sometimes miss GitHub notifications.
