@@ -42,8 +42,6 @@ module internal Helpers =
                 let methodTypes = m.GetParameters() |> Array.map (fun p -> p.ParameterType)
                 argTypes = methodTypes
             )
-    type Math with
-        static member DivRem(n, d) = (n / d), n % d
     #else
     type Type with
         member t.GetTypeInfo() = t

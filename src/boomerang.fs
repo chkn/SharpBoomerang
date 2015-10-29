@@ -404,8 +404,8 @@ module Combinators =
     /// Boomerangs a positive integer (greedy sequence of digits)
     let bpint : Boomerang<int> =
         let rec decomp i = seq {
-            let m, r = Math.DivRem(i, 10)
-            yield char (r + 48)
+            yield char ((i % 10) + 48)
+            let m = i / 10
             if m > 0 then
                 yield! decomp m
         }
