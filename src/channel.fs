@@ -27,17 +27,13 @@ type PipeChannel<'t>() =
     member __.Value = value
     member __.Read ret =
         match value with
-        | Some v ->
-            ret v
-            value <- None
+        | Some v -> ret v
         | None   ->
             valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
     member __.Write v =
-        match valueCallback with
-        | null     ->
-            value <- Some v
-        | callback ->
-            callback.Invoke(v)
+        value <- Some v
+        if valueCallback <> null then
+            valueCallback.Invoke(v)
             valueCallback <- null
     interface IChannel<'t> with
         member this.Read ret = this.Read ret
@@ -183,6 +179,28 @@ module Channel =
             new IChannel<_> with
                 member __.Read ret = ch.Read(fun v -> f1 v |> ret)
                 member __.Write v = ch.Write(f2 v)
+        }
+
+    let map2 f1 f2 f3 (ch : IChannel<_>) =
+        let mutable holder1 = None
+        let mutable holder2 = None
+        let doWrite() =
+            match holder1, holder2 with
+            | Some(v1), Some(v2) -> ch.Write(f3 v1 v2)
+            | _ -> ()
+        {
+            new IChannel<_> with
+                member __.Read ret = ch.Read(fun v -> f1 v |> ret)
+                member __.Write v = 
+                    holder1 <- Some v
+                    doWrite()
+        },
+        {
+            new IChannel<_> with
+                member __.Read ret = ch.Read(fun v -> f2 v |> ret)
+                member __.Write v =
+                    holder2 <- Some v
+                    doWrite()
         }
 
     /// Maps the given channel into a quoted string

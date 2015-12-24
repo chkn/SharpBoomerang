@@ -25,24 +25,16 @@ Requirements
 
 ### Visual Studio
 
-You'll need Visual Studio 2015 -- earlier versions will not work. Just load SharpBoomerang.sln and go!
+You'll need Visual Studio 2015 -- earlier versions will not work. Just load `SharpBoomerang.sln` and go!
 
-### Mono
+### Xamarin Studio
 
-If you're using Mono, you'll need to build and install F# 4.0 from source, as Mono doesn't package it yet. Thankfully, this is fairly straightforward:
-
-1. Clone `https://github.com/fsharp/fsharp`
-2. From the checkout, do the standard, `./configure && make`
-3. Install it into your system Mono with `sudo make install`
-
-After that you can load SharpBoomerang.sln in Xamarin Studio. The highlighting and code sense won't recognize F# 4.0 features, but compiling, running the tests, F# interactive, etc. should all work.
-
-Note that running `Introduction.fsx` in F# interactive currently crashes Mono.
+If you are using Mono, you'll need version 4.3.1 or newer. Just load `SharpBoomerang.sln` in Xamarin Studio and go!
 
 Docs
 ----
 
-An introduction in F# can be found in `Introduction.fsx`. The HTML docs can be built by running `build.fsx`.
+An introduction in F# can be found in `docs/Introduction.fsx`. The HTML docs can be built by running `build.fsx`.
 
 Tests
 -----

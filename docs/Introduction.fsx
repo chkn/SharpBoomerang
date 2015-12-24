@@ -5,8 +5,7 @@ Hey there! This document will give you a quick crash course in SharpBoomerang.
 
 SharpBoomerang is a library for specifying a grammar for both a parser and a
 pretty printer simultaneously. Every construct in SharpBoomerang is designed
-to be bidirectional. Its design is not purely functional. It is not thread
-safe.
+to be bidirectional.
 
 ## Follow Along
 
@@ -73,7 +72,7 @@ multiple `blit`s separated by the first-successful-parse operator, `<|>`, to
 try to parse a few different titles:
 *)
 
-let btitle =
+let btitle1 =
     (blit %"Mr") <|>
     (blit %"Ms") <|>
     (blit %"Dr")
@@ -83,10 +82,10 @@ Let's try that out:
 *)
 
 // should work:
-btitle |> parseFromStr "Dr"
+btitle1 |> parseFromStr "Dr"
 
 // uncomment, should fail:
-//btitle |> parseFromStr "Bs"
+//btitle1 |> parseFromStr "Bs"
 
 (**
 Play with the strings passed to `parseFromStr` above and you'll see that it correctly
@@ -95,7 +94,7 @@ only accepts "Mr", "Ms", or "Dr".
 Now let's try the printer:
 *)
 
-btitle |> printToStr
+btitle1 |> printToStr
 
 (**
 Well that always prints "Mr" no matter what. To see why this is, we need to talk a
@@ -113,29 +112,29 @@ title that was parsed. Then, when printing, that variable should be read to prin
 the correct title again. To do this, we'll use the channel-propagating first-successful-parse
 operator, `<.>`. That operator behaves the same as `<|>`, except that it exposes
 the successful parse on a channel that you pass to the resulting function. You'll note
-that simply changing `<|>` to `<.>` in our `btitle` boomerang yields a compiler error.
+that simply changing `<|>` to `<.>` in our `btitle1` boomerang yields a compiler error.
 Passing a channel (with %"..") to our `blit` partially applied it, consuming the
 channel argument. What we really want is to only pass that constant when parsing,
 but to print the value propagated by the `<.>` operator. We can do this with the
 `<??` operator:
 *)
 
-let btitle =
+let btitle2 =
     (blit <?? %"Mr") <.>
     (blit <?? %"Ms") <.>
     (blit <?? %"Dr")
 
 (**
-You'll note that the type of `btitle` is now `IChannel<string> -> Context -> Context`,
+You'll note that the type of `btitle2` is now `IChannel<string> -> Context -> Context`,
 when before it was just `Context -> Context`. This is because we now have
 a channel that will expose the successfully parsed string.
 
 We want our title to be optional, so we'll define a `string option` mutable binding
-to hold the value, and redefine `btitle` to optionally parse a title into that binding:
+to hold the value, and define a `btitle3` to optionally parse a title into that binding:
 *)
 
 let mutable title = None
-let btitle = ~~~btitle .-> <@ title @>
+let btitle3 = ~~~btitle2 .-> <@ title @>
 
 (**
 The `~~~` prefix operator takes a boomerang exposing an `IChannel<'t>` and makes it optional,
@@ -147,34 +146,34 @@ result will be written there, and when printing, that value will be read.
 Let's give it a try and see if it works:
 *)
 
-btitle |> parseFromStr "Dr"
+btitle3 |> parseFromStr "Dr"
 title // is now "Dr"
 
-btitle |> printToStr // now prints "Dr"
+btitle3 |> printToStr // now prints "Dr"
 
 title <- Some "Mr"
-btitle |> printToStr // now prints "Mr"
+btitle3 |> printToStr // now prints "Mr"
 
-btitle |> parseFromStr "Bs"
+btitle3 |> parseFromStr "Bs"
 title // is now None
 
 (**
-Our title will be followed by an optional dot (.) and then some whitespace,
-so let's define a couple boomerangs for those:
+Our title will be followed by an optional dot (.) and then some whitespace.
+ Let's define a boomerang that will match that, but only if `title` is `Some`:
 *)
 
-let bmanyws = !+(bws %' ')
-let boptdot = ~~(blit %".") %true
-let btitle  = btitle >> ~~(boptdot >> bmanyws) %%(fun r -> r title.IsSome)
+let bdotwsiftitle = ~~(~~(blit %".") %true >> !+(bws %' ')) %%(fun ret -> ret title.IsSome)
 
 (**
+The `~~` prefix operator indicates that the boomerang is optional to parse, and exposes an
+`IChannel<bool>` to determine if it is printed. For the "." after the title, it will be optional
+to parse, but always printed, so we can pass a constant `true`. For the overall boomerang, we only
+want to print it if `title.IsSome`.
+
 The `bws` boomerang matches any single character of whitespace (' ', '\t', '\r', '\n').
 In our case, we don't care what character was actually parsed and we always want to print a single space,
 so we just pass a read-only channel with that. The `!+` prefix operator indicates that the boomerang can
 be greedily matched one or more times, though when printing, it will only print once.
-
-Next, the `~~` prefix operator indicates that the boomerang is optional to parse, and exposes an
-`IChannel<bool>` to determine if it is printed (to which we simply supply a constant `true`).
 
 Okay, so let's put this all together into a full parser for our definition of a name:
 *)
@@ -182,11 +181,11 @@ Okay, so let's put this all together into a full parser for our definition of a 
 let mutable firstName = ""
 let mutable lastName = ""
 
-let bname = btitle >> (bstr .-> <@ firstName @>) >> bmanyws >> (bstr .-> <@ lastName @>)
+let bname1 = btitle3 >> bdotwsiftitle >> (bstr .-> <@ firstName @>) >> !+(bws %' ') >> (bstr .-> <@ lastName @>)
 
-bname |> parseFromStr "Mr. Alex Corrado"
+bname1 |> parseFromStr "Mr. Elmer Fudd"
 
-bname |> printToStr
+bname1 |> printToStr
 
 (**
 Play with the name passed in to `parseFromStr`, and you'll see that this pretty much works:
@@ -205,11 +204,22 @@ type Title =
     | Dr
 
 type Name = {
-    Title : Title;
+    Title : Title option;
     First : string;
     Last  : string;
     }
 
 (**
-To be continued...
+Let's start again and define boomerangs to parse our title using these data structures.
+As our title is now a discriminated union, and none of its cases take any arguments, we
+can now use the `bdu` built-in boomerang to quickly parse that:
 *)
+
+let btitle = ~~~(bdu<Title> .>> ~~(blit %".") %true .>> !+(bws %' '))
+
+let bname = btitle .>>. bstr .>> !+(bws %' ') .>>. bstr .>>% ((fun (t, f, l) -> { Title = t; First = f; Last = l }), (fun n -> (n.Title, n.First, n.Last)))
+
+let parseName = StringInputChannel >> parser bname
+
+parseName "Alex Corrado"
+

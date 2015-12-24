@@ -97,12 +97,27 @@ module Combinators =
     let Printing = ContextType.Printing
 
     let parseFromStr str (b : Boomerang) =
-        use __ = new Context(Parsing, StringInputChannel(str)) |> b
-        ()
+        using (new Context(Parsing, StringInputChannel(str)) |> b) ignore
+
     let printToStr (b : Boomerang) =
         let buf = StringBuilder()
-        use __ = new Context(Printing, StringOutputChannel(buf)) |> b
-        buf.ToString ()
+        using (new Context(Printing, StringOutputChannel(buf)) |> b) ignore
+        buf.ToString()
+
+    let parser (b : Boomerang<_>) inputCh =
+        let ch = Channel.pipe()
+        using (new Context(Parsing, inputCh) |> b ch) ignore
+        ch.Value.Value
+
+    let printer (b : Boomerang<_>) outputCh value =
+        let ch = Channel.ofValue value
+        using (new Context(Printing, outputCh) |> b ch) ignore
+
+    let stringPrinter b value =
+        let buf = StringBuilder()
+        let out = StringOutputChannel(buf)
+        printer b out value
+        buf.ToString()
 
     // Channel operators:
 
@@ -139,8 +154,36 @@ module Combinators =
     /// Sequentially calls left and right, propagating the right channel
     let inline (>>.) (l : Boomerang) (r : Boomerang<_>) ch = l >> r ch
 
+    /// Yields the given value on a channel if the left boomerang matches
+    let (>>%) (l : Boomerang) value (ch : IChannel<_>) (ctx : Context) =
+        match ctx.Type with
+        | Parsing ->
+            let nctx = l ctx
+            ch.Write(value)
+            nctx
+        | Printing ->
+            ch.Read(fun v -> ctx.Expect((fun _ -> v = value), sprintf "%A but got %A" value v))
+            l ctx
+        | _ -> failwith "Unknown context type"
+
     /// Maps the value of the channel from the left boomerang using an `Iso`
-    let inline (>>%) (l : Boomerang<_>) (f1, f2) ch = l (Channel.map (f2, f1) ch)
+    let inline (.>>%) (l : Boomerang<_>) (f1, f2) ch = l (Channel.map (f2, f1) ch)
+
+    // KLUDGE: Nasty, but gets the job done
+    //  Technique thanks to http://stackoverflow.com/a/2812306/578190
+    type __TupleBoomerang =
+        static member Append(l : Boomerang<_>, r : Boomerang<_>, ch : IChannel<_>) =
+            let lch, rch = Channel.map2 (fun (a, _) -> a) (fun (_, b) -> b) (fun a b -> (a, b)) ch
+            l lch >> r rch
+        static member Append(l : Boomerang<(_ * _)>, r : Boomerang<_>, ch : IChannel<_>) =
+            let lch, rch = Channel.map2 (fun (a, b, _) -> (a, b)) (fun (_, _, c) -> c) (fun (a, b) c -> (a, b, c)) ch
+            l lch >> r rch
+
+    let inline __tupleBoomerangAppend_< ^t, ^a, ^b, ^c, ^d when (^t or ^a) : (static member Append : ^a * ^b * ^c -> ^d)> a b c =
+        ((^t or ^a) : (static member Append : ^a * ^b * ^c -> ^d) (a, b, c))
+
+    // Sequentially calls left and right, combining the channels into a tuple channel
+    let inline (.>>.) l r ch = __tupleBoomerangAppend_<__TupleBoomerang, _, _, _, _> l r ch
 
     /// First tries the left boomerang and then the right
     let inline (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
@@ -313,7 +356,7 @@ module Combinators =
             collector.Flush()
         nctx
 
-    /// Left conditional operator. Pipes the first channel when parsing, second when printing.
+    /// Left conditional operator. Reads the first channel when parsing, second when printing.
     ///  Writes go to both channels.
     let (<??) (l : Boomerang<_>) (parseCh : IChannel<_>) (printCh : IChannel<_>) (ctx : Context) =
         l {
@@ -335,7 +378,7 @@ module Combinators =
         } ctx
 
     /// Pipes the channel from the left boomerang into the quoted variable
-    let inline (.->) (l : Boomerang<_>) (r : Expr<_>) = Channel.ofExpr r |> l
+    let inline (.->) (l : Boomerang<_>) (r : Expr<_>) = l (Channel.ofExpr r)
 
     /// Customizes the error message
     let (<?>) (l : Boomerang) (expected : string channel) (ctx : Context) =
@@ -347,7 +390,7 @@ module Combinators =
             ctx
 
     /// Customizes the error message and propagates the channel
-    let (<?.>) (l : Boomerang<_>) (expected : string channel) (ch : IChannel<_>) (ctx : Context) =
+    let (<.?>) (l : Boomerang<_>) (expected : string channel) (ch : IChannel<_>) (ctx : Context) =
         let index = ctx.Channel.Index
         try
             l ch ctx
@@ -392,7 +435,7 @@ module Combinators =
     let bnstr n =
         n
         |> bnchrs
-        >>% ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
+        .>>% ((fun chrs -> String(chrs)), (fun s -> s.ToCharArray()))
 
     /// Boomerangs a literal string
     let blit (str : string channel) =
@@ -409,11 +452,11 @@ module Combinators =
             if m > 0 then
                 yield! decomp m
         }
-        !+.bdigit >>% (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
+        !+.bdigit .>>% (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
  
     /// Boomerangs an arbitrary length string (non-greedy sequence of characters)
     let bstr : Boomerang<string> =
-        +.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str.ToCharArray() :> char seq))
+        +.bchr .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str.ToCharArray() :> char seq))
 
     /// Boomerangs a discriminated union case that takes no arguments
     let bdu<'a> : Boomerang<'a> =
@@ -430,4 +473,4 @@ module Combinators =
         |> Array.map (fun case -> blit <?? (Channel.ofValue case.Name))
         |> List.ofArray
         |> bfirst
-        >>% (fromString, toString)
+        .>>% (fromString, toString)

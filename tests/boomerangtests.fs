@@ -11,6 +11,13 @@ type Title =
     | Ms
     | Dr
 
+type Name = {
+    Title : Title option;
+    First : string;
+    Last  : string;
+    }
+
+
 [<TestFixture>]
 type BoomerangTests() =
 
@@ -62,7 +69,7 @@ type BoomerangTests() =
 
     [<Test>]
     member __.ChPropOneOrMore() =
-        testCh (!+.bchr >>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "hello"
+        testCh (!+.bchr .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "hello"
 
     [<Test>]
     member __.PInt() = testCh bpint 123 "123"
@@ -93,3 +100,39 @@ type BoomerangTests() =
  
     [<Test>]
     member __.DU() = testCh (bdu<Title>) Ms "Ms"
+
+    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Dr\" at position 0 OR \"Ms\" at position 0 OR \"Mr\" at position 0")>]
+    member __.DUExpected() = testCh (bdu<Title>) Ms "Bs"
+
+    [<Test>]
+    member __.ManualDU() = testCh ((blit %"Mr" >>% Mr) <.> (blit %"Ms" >>% Ms) <.> (blit %"Dr" >>% Dr)) Dr "Dr"
+
+    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Mr\" at position 0 OR \"Ms\" at position 0 OR \"Dr\" at position 0")>]
+    member __.ManualDUExpected() = testCh ((blit %"Mr" >>% Mr) <.> (blit %"Ms" >>% Ms) <.> (blit %"Dr" >>% Dr)) Dr "Bs"
+
+    [<Test>]
+    member __.LitMap() =
+        testCh (blit %"five" >>% 5) 5 "five"
+
+    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "5 but got 6 at position 0")>]
+    member __.LitMapExpected() =
+        let b = blit %"five" >>% 5
+        b %6 |> printToStr |> ignore
+
+    [<Test>]
+    member __.Tuple2Ints() = testCh (bdigit .>>. bdigit) ('1', '2') "12"
+
+    [<Test>]
+    member __.Tuple3Ints() =
+        let bdigits : Boomerang<(char * char * char)> = bdigit .>>. bdigit .>>. bdigit
+        testCh bdigits ('1', '2', '3') "123"
+
+    [<Test>]
+    member __.Name() =
+        let btitle = ~~~(bdu<Title> .>> ~~(blit %".") %true .>> !+(bws %' '))
+        let bname = btitle .>>. bstr .>> !+(bws %' ') .>>. bstr .>>% ((fun (t, f, l) -> { Title = t; First = f; Last = l }), (fun n -> (n.Title, n.First, n.Last)))
+        let parseName = StringInputChannel >> parser bname
+        let name = parseName "Dr. Albert Einstein"
+        Assert.AreEqual(Dr, name.Title.Value)
+        Assert.AreEqual("Albert", name.First)
+        Assert.AreEqual("Einstein", name.Last)
