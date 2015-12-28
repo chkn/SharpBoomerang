@@ -5,6 +5,10 @@ open NUnit.Framework
 
 open SharpBoomerang
 
+type DU =
+    | DUStr of string
+    | DUInt of int
+
 [<TestFixture>]
 type IsoTests() =
 
@@ -117,4 +121,16 @@ type IsoTests() =
         Assert.AreEqual("two", pipe.Value.Value, "#2")
         map
         |> assertRead 2 "#3"
+        |> ignore
+
+    [<Test>]
+    member x.UnionCaseImplicit() =
+        let pipe = Channel.pipe() |> write "hello"
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun s -> DUStr s))
+                  |> assertRead (DUStr("hello")) "#1"
+                  |> write (DUStr("bye"))
+        Assert.AreEqual("bye", pipe.Value.Value, "#2")
+        map
+        |> assertRead (DUStr("bye")) "#3"
         |> ignore

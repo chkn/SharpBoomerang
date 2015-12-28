@@ -40,6 +40,12 @@ type Iso private () =
                 | Var(v) -> a.[v] :> _
                 | Coerce(e, t) -> LExpr.Retype(visit e a b, t)
                 | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a b) :> _
+
+                | NewUnionCase(case, [arg]) when typeof<'b> = case.DeclaringType ->
+                    // The inverse of creating a union with one arg is decomposing the case into the arg
+                    let prop = case.GetFields().Single()
+                    LExpr.Property(LExpr.Retype(b, prop.DeclaringType), prop) :> _
+
                 | Let(v, body, following) ->
                     let p = LExpr.Parameter(v.Type, v.Name)
                     a.Add(v, p)
