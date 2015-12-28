@@ -453,6 +453,11 @@ module Combinators =
                 yield! decomp m
         }
         !+.bdigit .>>% (Seq.fold (fun i d -> i * 10 + (int d - 48)) 0, decomp >> Seq.rev)
+
+    /// Boomerangs a possibly-negative integer (greedy sequence of digits)
+    let bint : Boomerang<int> =
+        let negate = fun i -> -i
+        bpint <.> (blit %"-" >>. bpint .>>% (negate, negate))
  
     /// Boomerangs an arbitrary length string (non-greedy sequence of characters)
     let bstr : Boomerang<string> =

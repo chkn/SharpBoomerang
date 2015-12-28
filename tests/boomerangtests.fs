@@ -87,6 +87,11 @@ type BoomerangTests() =
         testSuccess (bpint ??> %3 |>> btimes (blit %"foo")) "3foofoofoo"
 
     [<Test>]
+    member __.Int() =
+        testCh bint 123 "123"
+        testCh bint -123 "-123"
+
+    [<Test>]
     member __.NGAtEnd() =
         testCh (+.bdigit) [| '5'; '5'; '5' |] "555"
 
