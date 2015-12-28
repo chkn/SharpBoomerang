@@ -136,3 +136,18 @@ type BoomerangTests() =
         Assert.AreEqual(Dr, name.Title.Value)
         Assert.AreEqual("Albert", name.First)
         Assert.AreEqual("Einstein", name.Last)
+
+    [<Test>]
+    member __.NCharsFirstSuccessfulRecovery() =
+        let bjchr = bnstr %2 // parse 2 characters
+                    .>>% Iso.ofFn (function
+                                   | "\\b" -> '\b'
+                                   | "\\f" -> '\u000C'
+                                   | "\\n" -> '\n'
+                                   | "\\r" -> '\r'
+                                   | "\\t" -> '\t'
+                                   | _ -> failwith "Not an escape sequence")
+                    <.> bchr
+        let bjstr = +.bjchr .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str.ToCharArray() :> char seq))
+        let print = stringPrinter bjstr
+        Assert.AreEqual("Hello\\nWorld", print "Hello\nWorld")

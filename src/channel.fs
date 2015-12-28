@@ -76,12 +76,17 @@ type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool)
             if shouldFlush buf then
                 this.Flush()
         member this.Read ret =
+            // It is important to requeue the value if the read fails.
+            let guardedRet result =
+                try ret result with _ ->
+                    buf.Insert(0, result)
+                    reraise()
             match dequeue() with
-            | Some result -> ret result
+            | Some result -> guardedRet result
             | _ -> ch.Read(fun v ->
                     buf.AddRange(v)
                     match dequeue() with
-                    | Some result -> ret result
+                    | Some result -> guardedRet result
                     | _ -> ()
                    )
 
