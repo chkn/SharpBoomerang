@@ -92,6 +92,23 @@ type BoomerangTests() =
         testCh bint -123 "-123"
 
     [<Test>]
+    member __.PFloat() =
+        testCh bpfloat 123 "123"
+        testCh bpfloat 12.345 "12.345"
+ 
+    [<Test>]
+    member __.Float() =
+        testCh bfloat 123 "123"
+        testCh bfloat 12.345 "12.345"
+        testCh bfloat -123 "-123"
+        testCh bfloat -12.345 "-12.345"
+
+    [<Test>]
+    member __.ChrPFloatChr() =
+        testCh (bchr %'a' >>. bpfloat .>> bchr %'b') 123 "a123b"
+        testCh (bchr %'a' >>. bpfloat .>> bchr %'b') 12.345 "a12.345b"
+
+    [<Test>]
     member __.NGAtEnd() =
         testCh (+.bdigit) [| '5'; '5'; '5' |] "555"
 

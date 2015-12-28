@@ -458,6 +458,17 @@ module Combinators =
     let bint : Boomerang<int> =
         let negate = fun i -> -i
         bpint <.> (blit %"-" >>. bpint .>>% (negate, negate))
+
+    /// Boomerangs a positive floating point number in the decimal format
+    // FIXME: This needs some love
+    let bpfloat : Boomerang<float> =
+        !+.(Channel.expectFn "floating point number" (fun c -> Char.IsDigit(c) || c = '.') >> bchr)
+        .>>% ((fun chrs -> Double.Parse(String(Seq.toArray chrs))), (fun f -> f.ToString().ToCharArray() :> char seq))
+
+    /// Boomerangs a possibly-negative floating point number
+    let bfloat : Boomerang<float> =
+        let negate = fun i -> -i
+        bpfloat <.> (blit %"-" >>. bpfloat .>>% (negate, negate))
  
     /// Boomerangs an arbitrary length string (non-greedy sequence of characters)
     let bstr : Boomerang<string> =
