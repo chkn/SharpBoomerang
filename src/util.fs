@@ -35,13 +35,16 @@ module internal Helpers =
     let getGenericMethod expr types =
         (getMethod expr).GetGenericMethodDefinition().MakeGenericMethod(types)
 
+    let argsMatch argTypes (m : MethodBase) =
+        let methodTypes = m.GetParameters() |> Array.map (fun p -> p.ParameterType)
+        argTypes = methodTypes
+
     #if NETFX_CORE
     type TypeInfo with
         member ti.GetMethod(name, argTypes) =
-            ti.GetDeclaredMethods(name).Single(fun m ->
-                let methodTypes = m.GetParameters() |> Array.map (fun p -> p.ParameterType)
-                argTypes = methodTypes
-            )
+            ti.GetDeclaredMethods(name) |> Seq.find (argsMatch argTypes)
+        member ti.GetConstructor(argTypes) =
+            ti.DeclaredConstructors |> Seq.find (argsMatch argTypes)
     #else
     type Type with
         member t.GetTypeInfo() = t
@@ -82,3 +85,16 @@ module internal Helpers =
             let funcType = typedefof<ExpressionFunc<_,_>>.MakeGenericType(p.Type, e.Type)
             let ctor = funcType.GetTypeInfo().DeclaredConstructors |> Seq.exactlyOne
             LExpr.New(ctor, LExpr.Constant(p), LExpr.Constant(e))
+
+        /// Conversion that retypes certain expressions
+        static member Retype(e : Expression, t : Type) : Expression =
+            match e.NodeType with
+            | ExpressionType.Default -> LExpr.Default(t) :> _
+            | _ ->
+                match e with
+                | :? UnaryExpression as unary ->
+                    match e.NodeType with
+                    | ExpressionType.Throw -> LExpr.Throw(unary.Operand, t) :> _
+                    | ExpressionType.Convert -> LExpr.Convert(unary.Operand, t) :> _
+                    | _ -> LExpr.Convert(e, t) :> _
+                | _ -> LExpr.Convert(e, t) :> _

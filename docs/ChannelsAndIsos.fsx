@@ -33,6 +33,9 @@ open System
 open SharpBoomerang
 
 (**
+Isos
+----
+
 Let's take numerical addition, whose inverse is simply subtraction. 
 Here's an isomorphism representing adding one to a number (and subtracting it):
 *)
@@ -47,6 +50,21 @@ define the `'a -> 'b` function:
 
 let add1_2 = Iso.ofFn (fun n -> n + 1)
 
+(**
+This feature can be very useful when maintaining both the function and its inverse is
+especially tedious or error-prone. A good example of this is a mapping function:
+*)
+
+let numbers = Iso.ofFn (function
+                        | 0 -> "zero"
+                        | 1 -> "one"
+                        | 2 -> "two"
+                        | 3 -> "three"
+                        | 4 -> "four"
+                        | 5 -> "five"
+                        | _ -> failwith "Too big")
+
+(snd numbers) "three" // -> 3
 
 (**
 Channels

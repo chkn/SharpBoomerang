@@ -93,3 +93,28 @@ type IsoTests() =
         map
         |> assertRead "456" "#3"
         |> ignore
+
+    [<Test>]
+    member x.FunctionImplicit() =
+        let pipe = Channel.pipe() |> write "up"
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (function | "up" -> "down" | "left" -> "right" | other -> other))
+                  |> assertRead "down" "#1"
+                  |> write "right"
+        Assert.AreEqual("left", pipe.Value.Value, "#2")
+        pipe.Write "foo"
+        map
+        |> assertRead "foo" "#3"
+        |> ignore
+
+    [<Test>]
+    member x.FunctionImplicitDifferentTypes() =
+        let pipe = Channel.pipe() |> write "one"
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (function | "one" -> 1 | "two" -> 2 | _ -> failwith "nope"))
+                  |> assertRead 1 "#1"
+                  |> write 2
+        Assert.AreEqual("two", pipe.Value.Value, "#2")
+        map
+        |> assertRead 2 "#3"
+        |> ignore

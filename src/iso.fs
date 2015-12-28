@@ -38,13 +38,30 @@ type Iso private () =
                 | Value(v, _) -> LExpr.Constant(v) :> _
                 | Var(v) when v = arg -> b :> _
                 | Var(v) -> a.[v] :> _
+                | Coerce(e, t) -> LExpr.Retype(visit e a b, t)
+                | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a b) :> _
+                | Let(v, body, following) ->
+                    let p = LExpr.Parameter(v.Type, v.Name)
+                    a.Add(v, p)
+                    let res = LExpr.Block([| p |], LExpr.Assign(p, visit body a b), visit following a b)
+                    a.Remove(v) |> ignore
+                    res :> _
 
-                // | Let(v, body, following) -> Expression.Ass
+                // Exceptions:
+                | SpecificCall <@@ raise @@> (_, _, [arg]) -> LExpr.Throw(visit arg a b, e.Type) :> _
+                | SpecificCall <@@ failwith @@> (_, _, [arg]) -> LExpr.Throw(LExpr.New(typeinfoof<Exception>.GetConstructor([| typeof<string> |]), visit arg a b), e.Type) :> _
+
+                // Control flow:
                 | Lambda(v, e) ->
                     // We swap the argument and return types
                     let p = LExpr.Parameter(e.Type, v.Name)
                     let d = toDict [v] [p]
                     LExpr.FSharpFunc(p, visit e d b) :> _
+
+                | IfThenElse(SpecificCall <@@ (=) @@> (_, _, [Var(v); arg2]), thn, els) when v = arg ->
+                    // Swap the if and the then
+                    let ifTrue = visit arg2 a b
+                    LExpr.Condition(LExpr.Equal(b, visit thn a b), ifTrue, LExpr.Retype(visit els a b, ifTrue.Type)) :> _
 
                 // Delegate ops:
                 | NewDelegate(t, args, body) ->
