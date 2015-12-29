@@ -310,7 +310,7 @@ module Combinators =
     /// Channel-propagating non-greedy one or more operator. Continues to match the given
     ///  boomerang until it fails or the next one succeeds.
     let (~+.) (l : Boomerang<'t>) (matched : IChannel<'t seq>) (ctx : Context) =
-        let collector = Channel.decompose (fun _ -> false) matched
+        let collector = Channel.decomposeSeq (fun _ -> false) matched
         let b = l collector
         match ctx.Type with
         | Parsing  ->
@@ -341,7 +341,7 @@ module Combinators =
     /// Channel-propagating greedy one or more operator. Continues to match the given boomerang
     ///  until it fails.
     let (!+.) (l : Boomerang<'t>) (matched : IChannel<'t seq>) (ctx : Context) =
-        let collector = matched |> Channel.decompose (fun _ -> false)
+        let collector = matched |> Channel.decomposeSeq (fun _ -> false)
         let mutable nctx = l collector ctx
         let mutable mark = Unchecked.defaultof<IMark>
         try
@@ -427,9 +427,43 @@ module Combinators =
         )
         !nctx
 
-    /// Boomerangs the given boomerang a given number of times into an array
-    //let barray (l : Boomerang<'t>) (times : int channel) (ch : IChannel<'t array>) (ctx : Context) =
-    //    ch |> Channel.decompose (fun lst -> lst
+    /// Boomerangs the given boomerang a given number of times into an array (channel-propagating counterpart to `btimes`)
+    let bnlist (l : Boomerang<'t>) (n : int channel) (list : IChannel<'t array>) (ctx : Context) =
+        let collector = Channel.decomposeArray (fun _ -> false) list
+        let nctx = ref ctx
+        let loop cnt =
+            for __ = 1 to cnt do
+                nctx := l collector !nctx
+        match ctx.Type with
+        | Parsing ->
+            n.Read(loop)
+            collector.Flush()
+        | Printing ->
+            list.Read(fun arry ->
+                let cnt = arry.Length
+                n.Write(cnt)
+                loop cnt
+            )
+        | _ -> failwith "Unknown context type"
+        !nctx
+
+    /// Boomerangs the given boomerang repeatedly, separated by the given separator
+    ///  Similar to the channel-propagating greedy one or more operator (!+.), but with the given separator
+    let bslist (l : Boomerang<'t>) (s : Boomerang) (list : IChannel<'t seq>) (ctx : Context) =
+        let collector = Channel.decomposeSeq (fun _ -> false) list
+        let mutable nctx = l collector ctx
+        let mutable mark = Unchecked.defaultof<IMark>
+        try
+            while collector.Count > 0 do
+                if mark <> null then mark.Dispose()
+                mark <- ctx.Channel.Mark()
+                nctx <- l collector (s nctx)
+        with _ ->
+            mark.Rewind()
+        if mark <> null then mark.Dispose()
+        if ctx.Type = Parsing then
+            collector.Flush()
+        nctx
 
     /// Boomerangs a string of a given length
     let bnstr n =

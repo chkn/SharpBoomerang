@@ -65,6 +65,13 @@ type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool)
         let result = buf.[0]
         buf.RemoveAt(0)
         Some result
+    new(ch : IChannel<'t array>, shouldFlush : List<'t> -> bool) =
+        DecomposeChannel(
+            {
+                new IChannel<'t seq> with
+                    member __.Read ret = ch.Read(ret)
+                    member __.Write v  = ch.Write(v :?> 't array)
+            }, shouldFlush)
     member __.Count = buf.Count
     member __.Flush() =
         let arry = buf.ToArray()
@@ -157,7 +164,8 @@ module Channel =
                     )
         }
 
-    let decompose shouldFlush ch = DecomposeChannel(ch, shouldFlush)
+    let decomposeSeq shouldFlush (ch : IChannel<'t seq>) = DecomposeChannel(ch, shouldFlush)
+    let decomposeArray shouldFlush (ch : IChannel<'t array>) = DecomposeChannel(ch, shouldFlush)
 
     type private ExpectChannel<'t>(ch : 't channel, check : ('t -> unit) -> 't -> unit) =
         interface IChannel<'t> with

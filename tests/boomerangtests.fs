@@ -49,6 +49,9 @@ type BoomerangTests() =
     [<Test>]
     member __.LitTimes() = testSuccess (%3 |> btimes (blit %"foo")) "foofoofoo"
 
+    [<Test>]
+    member __.LitNList() = testCh (%3 |> bnlist bdigit) [| '1'; '2'; '3' |] "123"
+
     [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"foo\" at position 6")>]
     member __.LitMultExpected() = testSuccess (%3 |> btimes (blit %"foo")) "foofoo"
 
@@ -70,6 +73,10 @@ type BoomerangTests() =
     [<Test>]
     member __.ChPropOneOrMore() =
         testCh (!+.bchr .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "hello"
+
+    [<Test>]
+    member __.ChrSList() =
+        testCh (bslist bchr (blit %",") .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str :> char seq))) "hello" "h,e,l,l,o"
 
     [<Test>]
     member __.PInt() = testCh bpint 123 "123"
