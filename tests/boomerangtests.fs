@@ -17,7 +17,6 @@ type Name = {
     Last  : string;
     }
 
-
 [<TestFixture>]
 type BoomerangTests() =
 
@@ -180,3 +179,27 @@ type BoomerangTests() =
         let bjstr = +.bjchr .>>% ((fun chrs -> String(Seq.toArray chrs)), (fun str -> str.ToCharArray() :> char seq))
         let print = stringPrinter bjstr
         Assert.AreEqual("Hello\\nWorld", print "Hello\nWorld")
+
+    [<Test>]
+    member __.FirstSuccessfulRecorvery() =
+        let bjchr =
+            (blit %"\\b" >>% '\b')     <.>
+            (blit %"\\f" >>% '\u000C') <.>
+            (blit %"\\n" >>% '\n')     <.>
+            (blit %"\\r" >>% '\r')     <.>
+            (blit %"\\t" >>% '\t')     <.>
+            (blit %"\\\"" >>% '"')     <.>
+            bchr
+        let bjstr =
+            // Define an Iso for converting a character sequence to a string
+            let charsToStr : Iso<_,_> = ((fun chrs -> String(Seq.toArray chrs)),
+                                         (fun str  -> str.ToCharArray() :> char seq))
+            // Boomerang a quoted JSON string
+            blit %"\"" >>. (+.bjchr .>>% charsToStr) .>> blit %"\"" .>>% Iso.ofFn(fun str -> DUStr str)
+        let rec bjlist jlist =
+            blit %"[" >>. bslist bjson (bws0 >> blit %"," >> bws0) .>> blit %"]" .>>% Iso.ofFn(fun seq -> DUList seq) <| jlist
+        and bjson =
+            bjstr <.>
+            bjlist
+        let print = stringPrinter bjson
+        Assert.AreEqual("[\"Hello\\nWorld\"]", print(DUList([| DUStr("Hello\nWorld") |])))

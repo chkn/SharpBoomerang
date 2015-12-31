@@ -6,6 +6,20 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
+[<AllowNullLiteral>]
+type IMark =
+    inherit IDisposable
+    /// Seeks back to the point represented by this mark
+    abstract Rewind : unit -> unit
+
+[<Sealed>]
+type NullMark private () =
+    static let inst = new NullMark() :> IMark
+    static member Instance = inst
+    interface IMark with
+        member __.Rewind()  = ()
+        member __.Dispose() = ()
+
 /// Represents a bidirectional data source with Read and Write operations.
 type IChannel<'t> =
     /// Reads this `IChannel` and calls the passed function with the result.
@@ -14,6 +28,9 @@ type IChannel<'t> =
     /// Writes a`'t` into this `IChannel`.
     /// If this instance represents a read-only channel, then this method must do nothing.
     abstract Write : 't -> unit
+
+    /// Obtains an `IMark` for this `IChannel`'s current state.
+    abstract Mark : unit -> IMark
 
 type channel<'t> = IChannel<'t>
 
@@ -28,16 +45,21 @@ type PipeChannel<'t>() =
     member __.Read ret =
         match value with
         | Some v -> ret v
-        | None   ->
-            valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
+        | _ -> valueCallback <- Delegate.Combine(valueCallback, Action<'t>(ret)) :?> _
     member __.Write v =
         value <- Some v
         if valueCallback <> null then
             valueCallback.Invoke(v)
             valueCallback <- null
+    member __.Mark() =
+            let mark = value
+            { new IMark with
+                 member __.Rewind() = value <- mark
+                 member __.Dispose() = () }
     interface IChannel<'t> with
         member this.Read ret = this.Read ret
-        member this.Write v = this.Write v
+        member this.Write v  = this.Write v
+        member this.Mark()   = this.Mark()
 
 /// A channel for directly accessing a mutable data source.
 [<Sealed>]
@@ -53,50 +75,66 @@ type ExprChannel<'t>(expr : Expr<'t>) =
     | PropertyGet(None, pi, _) -> pi.SetValue(null, v, null)
     | PropertyGet(Some(expr), pi, _) -> pi.SetValue(getExpr expr, v, null)
     | u -> failwithf "Unsupported Expr: %A" u
+    let read() = getExpr expr :?> 't
+    member __.Read ret = read() |> ret
+    member __.Write v  = setExpr v expr
+    member this.Mark() =
+        let value = read()
+        { new IMark with
+             member __.Rewind() = this.Write(value)
+             member __.Dispose() = () }
     interface IChannel<'t> with
-        member __.Read ret = getExpr expr :?> 't |> ret
-        member __.Write v  = setExpr v expr
+        member this.Read ret = this.Read ret
+        member this.Write v  = this.Write v
+        member this.Mark()   = this.Mark()
 
 /// A channel for decomposing a sequence into its elements
 type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool) =
     let buf = List<'t>()
-    let dequeue() =
-        if buf.Count = 0 then None else
-        let result = buf.[0]
-        buf.RemoveAt(0)
-        Some result
+    let mutable i = 0
+    let mutable marks = 0
     new(ch : IChannel<'t array>, shouldFlush : List<'t> -> bool) =
         DecomposeChannel(
             {
                 new IChannel<'t seq> with
                     member __.Read ret = ch.Read(ret)
                     member __.Write v  = ch.Write(v :?> 't array)
+                    member __.Mark()   = ch.Mark()
             }, shouldFlush)
-    member __.Count = buf.Count
+    member __.Count = buf.Count - i
     member __.Flush() =
         let arry = buf.ToArray()
         buf.Clear()
+        i <- 0
         ch.Write(arry)
+    member this.Write v  =
+        buf.Add(v)
+        if shouldFlush buf then
+            this.Flush()
+    member this.Read ret =
+        let pop() =
+            let v = buf.[i]
+            if marks <= 0 then
+                buf.RemoveRange(0, i + 1)
+                i <- 0
+            else
+                i <- i + 1
+            ret v
+        if i < buf.Count then pop() else
+        ch.Read(fun v ->
+            buf.AddRange(v)
+            if i < buf.Count then pop()
+        )
+    member this.Mark() =
+        let mark = i
+        marks <- marks + 1
+        { new IMark with
+             member __.Rewind()  = i <- mark
+             member __.Dispose() = marks <- marks - 1 }
     interface IChannel<'t> with
-        member this.Write v  =
-            buf.Add(v)
-            if shouldFlush buf then
-                this.Flush()
-        member this.Read ret =
-            // It is important to requeue the value if the read fails.
-            let guardedRet result =
-                try ret result with _ ->
-                    buf.Insert(0, result)
-                    reraise()
-            match dequeue() with
-            | Some result -> guardedRet result
-            | _ -> ch.Read(fun v ->
-                    buf.AddRange(v)
-                    match dequeue() with
-                    | Some result -> guardedRet result
-                    | _ -> ()
-                   )
-
+        member this.Read ret = this.Read ret
+        member this.Write v  = this.Write v
+        member this.Mark()   = this.Mark()
 
 [<RequireQualifiedAccess>]
 module Channel =
@@ -121,6 +159,7 @@ module Channel =
             new IChannel<_> with
                 member __.Read ret = ret v
                 member __.Write _  = ()
+                member __.Mark()   = NullMark.Instance
         }
 
     // Channel ops:
@@ -132,6 +171,7 @@ module Channel =
             new IChannel<_> with
                 member __.Read ret = ch.Read(ret)
                 member __.Write _  = ()
+                member __.Mark()   = ch.Mark()
         }
 
     /// Reads a number from the first channel, and then collects that number of values from second channel
@@ -162,6 +202,7 @@ module Channel =
                                 )
                             readOne()
                     )
+                member __.Mark() = ch.Mark()
         }
 
     let decomposeSeq shouldFlush (ch : IChannel<'t seq>) = DecomposeChannel(ch, shouldFlush)
@@ -171,6 +212,7 @@ module Channel =
         interface IChannel<'t> with
             member __.Read ret = ch.Read(check ret)
             member __.Write nv = nv |> check ch.Write
+            member __.Mark()   = ch.Mark()
 
     /// Returns a channel that expects a certain value to be read or written
     ///  to/from the given channel. If a different value is read or written,
@@ -191,7 +233,8 @@ module Channel =
         {
             new IChannel<_> with
                 member __.Read ret = ch.Read(fun v -> f1 v |> ret)
-                member __.Write v = ch.Write(f2 v)
+                member __.Write v  = ch.Write(f2 v)
+                member __.Mark()   = ch.Mark()
         }
 
     let map2 f1 f2 f3 (ch : IChannel<_>) =
@@ -207,6 +250,7 @@ module Channel =
                 member __.Write v = 
                     holder1 <- Some v
                     doWrite()
+                member __.Mark() = ch.Mark()
         },
         {
             new IChannel<_> with
@@ -214,6 +258,7 @@ module Channel =
                 member __.Write v =
                     holder2 <- Some v
                     doWrite()
+                member __.Mark() = ch.Mark()
         }
 
     /// Maps the given channel into a quoted string

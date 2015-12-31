@@ -8,6 +8,7 @@ open SharpBoomerang
 type DU =
     | DUStr of string
     | DUInt of int
+    | DUList of DU seq
 
 [<TestFixture>]
 type IsoTests() =

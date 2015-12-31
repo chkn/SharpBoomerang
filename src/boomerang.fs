@@ -3,22 +3,16 @@
 open System
 open System.IO
 open System.Text
+open System.Globalization
 open System.Collections.Generic
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Reflection
-
-[<AllowNullLiteral>]
-type IMark =
-    inherit IDisposable
-    /// Seeks back to the point represented by this mark
-    abstract Rewind : unit -> unit
 
 /// A channel of characters that can be rewound to an earlier point
 type ICharChannel =
     inherit IChannel<char>
     abstract Index : int
     abstract EndOfStream : bool
-    abstract Mark : unit -> IMark
 
 /// An exception thrown for parse errors
 type Expected(str : string, inner : Exception) =
@@ -126,8 +120,10 @@ module Combinators =
 
     /// Read-only channel whose value is determined by a function
     let inline (~%%) fn = { new IChannel<_> with
-                             member x.Read ret = fn ret
-                             member x.Write v = () }
+                             member __.Read ret = fn ret
+                             member __.Write v = ()
+                             member __.Mark() = NullMark.Instance
+                          }
 
     /// Adapter. Connects the left and right channels
     ///  depending on whether the given Context is Parsing or Printing.
@@ -186,7 +182,7 @@ module Combinators =
     let inline (.>>.) l r ch = __tupleBoomerangAppend_<__TupleBoomerang, _, _, _, _> l r ch
 
     /// First tries the left boomerang and then the right
-    let inline (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
+    let (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
         use mark = ctx.Channel.Mark()
         try l ctx with e1 ->
             mark.Rewind()
@@ -208,22 +204,26 @@ module Combinators =
         iter lst
 
     /// First tries the left boomerang and then the right, propagating the channel
-    let inline (<.>) (l : Boomerang<_>) (r : Boomerang<_>) (ch : IChannel<_>) (ctx : Context) =
-        use mark = ctx.Channel.Mark()
+    let (<.>) (l : Boomerang<_>) (r : Boomerang<_>) (ch : IChannel<_>) (ctx : Context) =
+        use mark1 = ctx.Channel.Mark()
+        use mark2 = ch.Mark()
         try l ch ctx with e1 ->
-            mark.Rewind()
+            mark1.Rewind()
+            mark2.Rewind()
             try r ch ctx with e2 ->
                 raise(Expected([e1; e2]))
 
     /// Tries each boomerang in order, propagating the channel (plural of <.> operator)
     let bfirst (lst : Boomerang<_> list) (ch : IChannel<_>) (ctx : Context) =
         let mutable exns = []
-        use mark = ctx.Channel.Mark()
+        use mark1 = ctx.Channel.Mark()
+        use mark2 = ch.Mark()
         let rec iter = function
         | hd :: tl ->
             try hd ch ctx with e ->
                 exns <- e :: exns
-                mark.Rewind()
+                mark1.Rewind()
+                mark2.Rewind()
                 iter tl
         | [] ->
             raise(Expected(exns))
@@ -283,12 +283,16 @@ module Combinators =
             let mutable ctx = wrapped
             let mutable finished = false
             while not finished do
-                use mark = this.Channel.Mark()
+                use mark1 = this.Channel.Mark()
+                use mark2 = l.Mark()
+                use mark3 = r.Mark()
                 try
                     base.Connect(l, r) |> ignore
                     finished <- true
                 with _ ->
-                    mark.Rewind()
+                    mark1.Rewind()
+                    mark2.Rewind()
+                    mark3.Rewind()
                     ctx <- fn ctx
             onFinish()
             ctx
@@ -367,6 +371,11 @@ module Combinators =
                     | Parsing  -> parseCh.Read ret
                     | Printing -> printCh.Read ret
                     | _ -> failwith "Unknown context type"
+                member __.Mark() =
+                    match ctx.Type with
+                    | Parsing  -> parseCh.Mark()
+                    | Printing -> printCh.Mark()
+                    | _ -> failwith "Unknown context type"
         } ctx
 
     /// Right conditional operator. Reads come from first channel, writes go to second channel
@@ -375,6 +384,7 @@ module Combinators =
             new IChannel<'t> with
                 member __.Write v  = writeCh.Write v
                 member __.Read ret = readCh.Read(fun v -> writeCh.Write(v); ret v)
+                member __.Mark()   = readCh.Mark()
         } ctx
 
     /// Pipes the channel from the left boomerang into the quoted variable
@@ -412,8 +422,12 @@ module Combinators =
     /// Boomerangs a digit (0 - 9) as a System.Char
     let bdigit digit = Channel.expectFn "digit" Char.IsDigit <-> digit
 
-    /// Boomerangs a whitespace character
+    /// Boomerangs a single whitespace character
     let bws ws = Channel.expectFn "whitespace" Char.IsWhiteSpace <-> ws
+
+    /// Boomerangs a greedy sequence of zero or more whitespace characters.
+    ///  When printing, no whitespace is printed.
+    let bws0 : Boomerang = ~~(!+(bws %' ')) %false
 
     /// Boomerangs a given number of characters into an array
     let bnchrs n chrs = Channel.collect n <-> chrs
@@ -497,7 +511,8 @@ module Combinators =
     // FIXME: This needs some love
     let bpfloat : Boomerang<float> =
         !+.(Channel.expectFn "floating point number" (fun c -> Char.IsDigit(c) || c = '.') >> bchr)
-        .>>% ((fun chrs -> Double.Parse(String(Seq.toArray chrs))), (fun f -> f.ToString().ToCharArray() :> char seq))
+        .>>% ((fun chrs -> Double.Parse(String(Seq.toArray chrs), CultureInfo.InvariantCulture)),
+              (fun f -> f.ToString(CultureInfo.InvariantCulture).ToCharArray() :> char seq))
 
     /// Boomerangs a possibly-negative floating point number
     let bfloat : Boomerang<float> =
