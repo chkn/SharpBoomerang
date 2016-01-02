@@ -7,7 +7,7 @@ open SharpBoomerang
 
 type DU =
     | DUStr of string
-    | DUInt of int
+    | DUFloat of float
     | DUList of DU seq
 
 [<TestFixture>]

@@ -127,10 +127,19 @@ type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool)
         )
     member this.Mark() =
         let mark = i
+        let submark = if i >= buf.Count then ch.Mark() else null
         marks <- marks + 1
         { new IMark with
-             member __.Rewind()  = i <- mark
-             member __.Dispose() = marks <- marks - 1 }
+             member __.Rewind()  =
+                i <- mark
+                if submark <> null then
+                    buf.RemoveRange(i, buf.Count - i)
+                    submark.Rewind()
+             member __.Dispose() =
+                marks <- marks - 1
+                if submark <> null then
+                    submark.Dispose()
+        }
     interface IChannel<'t> with
         member this.Read ret = this.Read ret
         member this.Write v  = this.Write v

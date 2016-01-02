@@ -196,10 +196,12 @@ type BoomerangTests() =
                                          (fun str  -> str.ToCharArray() :> char seq))
             // Boomerang a quoted JSON string
             blit %"\"" >>. (+.bjchr .>>% charsToStr) .>> blit %"\"" .>>% Iso.ofFn(fun str -> DUStr str)
+        let bjnum = bfloat .>>% Iso.ofFn(fun num -> DUFloat num)
         let rec bjlist jlist =
             blit %"[" >>. bslist bjson (bws0 >> blit %"," >> bws0) .>> blit %"]" .>>% Iso.ofFn(fun seq -> DUList seq) <| jlist
         and bjson =
             bjstr <.>
+            bjnum <.>
             bjlist
         let print = stringPrinter bjson
-        Assert.AreEqual("[\"Hello\\nWorld\"]", print(DUList([| DUStr("Hello\nWorld") |])))
+        Assert.AreEqual("[5,6,\"Hello\\nWorld\"]", print(DUList([| DUFloat(5.0); DUFloat(6.0); DUStr("Hello\nWorld") |])))
