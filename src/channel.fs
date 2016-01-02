@@ -6,6 +6,8 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
+open SharpBoomerang.Expected
+
 [<AllowNullLiteral>]
 type IMark =
     inherit IDisposable
@@ -226,15 +228,15 @@ module Channel =
     /// Returns a channel that expects a certain value to be read or written
     ///  to/from the given channel. If a different value is read or written,
     ///  throws an exception. The value to be expected is read from a channel.
-    let expect (expected : IChannel<_>) (ch : IChannel<_>) =
-        let check ret value = expected.Read(fun v -> if value = v then ret v else failwithf "%A" v)
+    let expect (exp : IChannel<_>) (ch : IChannel<_>) =
+        let check ret value = exp.Read(fun v -> if value = v then ret v else sprintf "%A" v |> expected)
         ExpectChannel(ch, check) :> IChannel<_>
 
     /// Returns a channel that expects a certain value to be read or written
     ///  to/from the given channel. If a different value is read or written,
     ///  throws an exception with the given description. The expected value is determined by a function.
     let expectFn (desc : string) (check : 't -> bool) (ch : IChannel<_>) =
-        let check ret value = if check value then ret value else failwithf "%s" desc
+        let check ret value = if check value then ret value else expected desc
         ExpectChannel(ch, check) :> IChannel<_>
 
     /// Maps one channel type onto another using an Iso

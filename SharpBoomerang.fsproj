@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\util.fs" />
+    <Compile Include="src\expected.fs" />
     <Compile Include="src\iso.fs" />
     <Compile Include="src\channel.fs" />
     <Compile Include="src\boomerang.fs" />

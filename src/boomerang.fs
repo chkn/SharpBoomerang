@@ -8,19 +8,13 @@ open System.Collections.Generic
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Reflection
 
+open SharpBoomerang.Expected
+
 /// A channel of characters that can be rewound to an earlier point
 type ICharChannel =
     inherit IChannel<char>
     abstract Index : int
     abstract EndOfStream : bool
-
-/// An exception thrown for parse errors
-type Expected(str : string, inner : Exception) =
-    inherit Exception(str, inner)
-    new(wrapped : Exception, where) = Expected(sprintf "%s at position %i" wrapped.Message where, wrapped)
-    new(what : string, where : int) = Expected(sprintf "%s at position %i" what where, null)
-    new(inner : Exception, what, where) = Expected(sprintf "%s at position %i" what where, inner)
-    new(lst : exn list) = Expected(String.Join(" OR ", lst |> List.map (fun e -> e.Message)), AggregateException(lst))
 
 // Can't use a DU for Context because we need a special subclass for parsing until success
 type ContextType =
@@ -31,7 +25,7 @@ type Context(contextType : ContextType, channel : ICharChannel) =
     member this.Type = contextType
     member this.Channel = channel
     abstract Expect : (unit -> bool) * string -> unit
-    default this.Expect(bln, what) = if not(bln()) then raise(Expected(what, channel.Index))
+    default this.Expect(bln, what) = if not(bln()) then what |> expectedAt { Row = None; Col = channel.Index }
     abstract Connect : IChannel<'t> * IChannel<'t> -> Context
     default this.Connect(l, r) =
         let index = channel.Index
@@ -41,10 +35,10 @@ type Context(contextType : ContextType, channel : ICharChannel) =
             | ContextType.Printing -> r.Read(fun v -> l.Write(v))
             | _ -> failwith "Unknown context type"
             this
-        // Catch and wrap vanilla System.Exception to enable `failwith` (e.g. in channel.fs)
-        //  - we assume any more specific exception is unexpected and don't catch it.
-        with e when e.GetType() = typeof<Exception> ->
-            raise(Expected(e, index))
+        with :? Expected as e when e.Position.IsNone ->
+            // We might want to set inner exception to the original exception here,
+            //   but we need to make sure everything works right in Expected.ofList
+            raise(Expected(e.Expected, Some { Row = None; Col = index }, e.InnerException))
     abstract Dispose : unit -> unit
     default this.Dispose() = ()
     interface IDisposable with
@@ -60,7 +54,7 @@ type StringInputChannel(str : string) =
         member __.EndOfStream = index >= str.Length
         member __.Write v = ()
         member __.Read ret =
-            if index >= str.Length then raise(Expected("<character>", index))
+            if index >= str.Length then "<character>" |> expectedAt { Row = None; Col = index }
             let i = index
             index <- index + 1
             ret str.[i]
@@ -187,7 +181,7 @@ module Combinators =
         try l ctx with e1 ->
             mark.Rewind()
             try r ctx with e2 ->
-                raise(Expected([e1; e2]))
+                raise(Expected.ofList([e1; e2]))
 
     /// Tries each boomerang in order (plural of <|> operator)
     let bchoice (lst : Boomerang list) (ctx : Context) =
@@ -200,7 +194,7 @@ module Combinators =
                 mark.Rewind()
                 iter tl
         | [] ->
-            raise(Expected(exns))
+            raise(Expected.ofList(exns))
         iter lst
 
     /// First tries the left boomerang and then the right, propagating the channel
@@ -211,7 +205,7 @@ module Combinators =
             mark1.Rewind()
             mark2.Rewind()
             try r ch ctx with e2 ->
-                raise(Expected([e1; e2]))
+                raise(Expected.ofList([e1; e2]))
 
     /// Tries each boomerang in order, propagating the channel (plural of <.> operator)
     let bfirst (lst : Boomerang<_> list) (ch : IChannel<_>) (ctx : Context) =
@@ -226,7 +220,7 @@ module Combinators =
                 mark2.Rewind()
                 iter tl
         | [] ->
-            raise(Expected(exns))
+            raise(Expected.ofList(exns))
         iter lst
 
     /// Optional operator.
@@ -396,7 +390,7 @@ module Combinators =
         try
             l ctx
         with e ->
-            expected.Read(fun s -> raise(Expected(e, s, index)))
+            expected.Read(fun s -> raise(Expected(s, Some { Row = None; Col = index }, e)))
             ctx
 
     /// Customizes the error message and propagates the channel
@@ -405,7 +399,7 @@ module Combinators =
         try
             l ch ctx
         with e ->
-            expected.Read(fun s -> raise(Expected(e, s, index)))
+            expected.Read(fun s -> raise(Expected(s, Some { Row = None; Col = index }, e)))
             ctx
 
     // Boomerangs:

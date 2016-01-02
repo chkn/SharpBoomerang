@@ -129,13 +129,13 @@ type BoomerangTests() =
     [<Test>]
     member __.DU() = testCh (bdu<Title>) Ms "Ms"
 
-    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Dr\" at position 0 OR \"Ms\" at position 0 OR \"Mr\" at position 0")>]
+    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Ms\", \"Dr\", OR \"Mr\" at position 0")>]
     member __.DUExpected() = testCh (bdu<Title>) Ms "Bs"
 
     [<Test>]
     member __.ManualDU() = testCh ((blit %"Mr" >>% Mr) <.> (blit %"Ms" >>% Ms) <.> (blit %"Dr" >>% Dr)) Dr "Dr"
 
-    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Mr\" at position 0 OR \"Ms\" at position 0 OR \"Dr\" at position 0")>]
+    [<Test; ExpectedException(typeof<Expected>, ExpectedMessage = "\"Ms\", \"Mr\", OR \"Dr\" at position 0")>]
     member __.ManualDUExpected() = testCh ((blit %"Mr" >>% Mr) <.> (blit %"Ms" >>% Ms) <.> (blit %"Dr" >>% Dr)) Dr "Bs"
 
     [<Test>]
