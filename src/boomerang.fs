@@ -13,7 +13,7 @@ open SharpBoomerang.Expected
 /// A channel of characters that can be rewound to an earlier point
 type ICharChannel =
     inherit IChannel<char>
-    abstract Index : int
+    abstract Position : Position
     abstract EndOfStream : bool
 
 // Can't use a DU for Context because we need a special subclass for parsing until success
@@ -25,10 +25,10 @@ type Context(contextType : ContextType, channel : ICharChannel) =
     member this.Type = contextType
     member this.Channel = channel
     abstract Expect : (unit -> bool) * string -> unit
-    default this.Expect(bln, what) = if not(bln()) then what |> expectedAt { Row = None; Col = channel.Index }
+    default this.Expect(bln, what) = if not(bln()) then what |> expectedAt channel.Position
     abstract Connect : IChannel<'t> * IChannel<'t> -> Context
     default this.Connect(l, r) =
-        let index = channel.Index
+        let pos = channel.Position
         try
             match contextType with
             | ContextType.Parsing  -> l.Read(fun v -> r.Write(v))
@@ -38,7 +38,7 @@ type Context(contextType : ContextType, channel : ICharChannel) =
         with :? Expected as e when e.Position.IsNone ->
             // We might want to set inner exception to the original exception here,
             //   but we need to make sure everything works right in Expected.ofList
-            raise(Expected(e.Expected, Some { Row = None; Col = index }, e.InnerException))
+            raise(Expected(e.Expected, Some pos, e.InnerException))
     abstract Dispose : unit -> unit
     default this.Dispose() = ()
     interface IDisposable with
@@ -49,24 +49,28 @@ type Boomerang<'t> = 't channel -> Boomerang
 
 type StringInputChannel(str : string) =
     let mutable index = 0
+    member __.Position = { Row = None; Col = index }
+    member __.EndOfStream = index >= str.Length
+    member this.Read ret =
+        if this.EndOfStream then "<character>" |> expectedAt this.Position
+        let i = index
+        index <- index + 1
+        ret str.[i]
+    member __.Mark() =
+        let mark = index
+        { new IMark with
+             member __.Rewind() = index <- mark
+             member __.Dispose() = () }
     interface ICharChannel with
-        member __.Index = index
-        member __.EndOfStream = index >= str.Length
-        member __.Write v = ()
-        member __.Read ret =
-            if index >= str.Length then "<character>" |> expectedAt { Row = None; Col = index }
-            let i = index
-            index <- index + 1
-            ret str.[i]
-        member __.Mark() =
-            let mark = index
-            { new IMark with
-                 member __.Rewind() = index <- mark
-                 member __.Dispose() = () }
+        member this.Position = this.Position
+        member this.EndOfStream = this.EndOfStream
+        member this.Write v = ()
+        member this.Read ret = this.Read ret
+        member this.Mark() = this.Mark()
 
 type StringOutputChannel(writer : StringBuilder) =
     interface ICharChannel with
-        member __.Index = writer.Length
+        member __.Position = { Row = None; Col = writer.Length }
         member __.EndOfStream = false
         member __.Write v = writer.Append(v) |> ignore
         member __.Read ret = ()
@@ -386,20 +390,20 @@ module Combinators =
 
     /// Customizes the error message
     let (<?>) (l : Boomerang) (expected : string channel) (ctx : Context) =
-        let index = ctx.Channel.Index
+        let pos = ctx.Channel.Position
         try
             l ctx
         with e ->
-            expected.Read(fun s -> raise(Expected(s, Some { Row = None; Col = index }, e)))
+            expected.Read(fun s -> raise(Expected(s, Some pos, e)))
             ctx
 
     /// Customizes the error message and propagates the channel
     let (<.?>) (l : Boomerang<_>) (expected : string channel) (ch : IChannel<_>) (ctx : Context) =
-        let index = ctx.Channel.Index
+        let pos = ctx.Channel.Position
         try
             l ch ctx
         with e ->
-            expected.Read(fun s -> raise(Expected(s, Some { Row = None; Col = index }, e)))
+            expected.Read(fun s -> raise(Expected(s, Some pos, e)))
             ctx
 
     // Boomerangs:
