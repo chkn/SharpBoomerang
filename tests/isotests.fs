@@ -135,3 +135,28 @@ type IsoTests() =
         map
         |> assertRead (DUStr("bye")) "#3"
         |> ignore
+
+    [<Test>]
+    member x.TupleImplicit1() =
+        let pipe = Channel.pipe() |> write ("a", "B")
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun (a, b) -> (a.ToUpperInvariant(), b.ToLowerInvariant())))
+                  |> assertRead ("A", "b") "#1"
+                  |> write ("C", "d")
+        Assert.AreEqual(("c", "D"), pipe.Value.Value, "#2")
+        map
+        |> assertRead ("C", "d") "#3"
+        |> ignore
+
+    [<Test>]
+    member x.TupleImplicit2() =
+        let pipe = Channel.pipe() |> write (1, 2, "a")
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun (a, b, c) -> (a.ToString(), b.ToString(), c.ToUpperInvariant())))
+                  |> assertRead ("1", "2", "A") "#1"
+                  |> write ("3", "4", "B")
+        Assert.AreEqual((3, 4, "b"), pipe.Value.Value, "#2")
+        map
+        |> assertRead ("3", "4", "B") "#3"
+        |> ignore
+      

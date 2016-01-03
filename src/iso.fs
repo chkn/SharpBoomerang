@@ -8,6 +8,7 @@ open System.Text.RegularExpressions
 open System.Collections.Generic
 
 open Microsoft.FSharp.Math
+open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
@@ -28,6 +29,7 @@ type Iso private () =
     static member oneWay(fn : 'a -> 'b) : Iso<_,_> = fn, (fun _ -> failwith "Reverse transformation not supported")
 
     /// Given a simple function, `'a -> 'b`, attempts to derive the inverse implicitly
+    // This method is a work in progress. We will add cases as they come up.
     static member ofFn([<ReflectedDefinition(true)>] expr : Expr<('a -> 'b)>) : Iso<_,_> =
         match expr with
         | WithValue(:? ('a -> 'b) as fn, _, Lambda(arg, body)) ->
@@ -41,10 +43,33 @@ type Iso private () =
                 | Coerce(e, t) -> LExpr.Retype(visit e a b, t)
                 | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a b) :> _
 
+                // DU:
                 | NewUnionCase(case, [arg]) when typeof<'b> = case.DeclaringType ->
                     // The inverse of creating a union with one arg is decomposing the case into the arg
                     let prop = case.GetFields().Single()
                     LExpr.Property(LExpr.Retype(b, prop.DeclaringType), prop) :> _
+
+                // Tuple:
+                // FIXME: Generalize this to other expressions than NewTuple
+                | TupleDecompose(t, args, (NewTuple(exprs) as nt)) when typeof<'b> = nt.Type ->
+                    let inpts = Seq.zip args exprs
+                                |> Seq.map (fun (v, e) -> let p = LExpr.Parameter(e.Type, v.Name) in a.Add(v, p); p)
+                                |> Seq.toList
+                    let outps = args |> List.map (fun v -> LExpr.Parameter(v.Type, v.Name))
+                    let objs = outps |> List.map (fun p -> LExpr.Convert(p, typeof<obj>) :> LExpr)
+                    let makeTuple = typeinfoof<FSharpValue>.GetMethod("MakeTuple")
+                    let getTupleFields = typeinfoof<FSharpValue>.GetMethod("GetTupleFields")
+                    let body =
+                        [
+                            LExpr.AssignAll(inpts, LExpr.Call(getTupleFields, b :> LExpr)) |> Seq.singleton;
+                            Seq.zip outps exprs |> Seq.map (fun (p, e) -> LExpr.Assign(p, visit e a b) :> LExpr);
+                            LExpr.Convert(LExpr.Call(makeTuple, LExpr.NewArrayInit(typeof<obj>, objs), LExpr.Constant(t.Type)), t.Type) :> LExpr |> Seq.singleton
+                        ]
+                        |> Seq.concat
+                        |> Seq.toList
+                    for v in args do
+                        a.Remove(v) |> ignore
+                    LExpr.Block(t.Type, Seq.append inpts outps, body) :> _
 
                 | Let(v, body, following) ->
                     let p = LExpr.Parameter(v.Type, v.Name)

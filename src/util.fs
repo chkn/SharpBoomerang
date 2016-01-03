@@ -2,6 +2,8 @@
 
 open System
 open System.Reflection
+open System.Collections
+open System.Collections.Generic
 
 open System.Linq
 open System.Linq.Expressions
@@ -25,10 +27,20 @@ module internal Helpers =
     let inline toDict keys values =
         (List.zip keys values).ToDictionary(fst, snd)
 
+    // Expr helpers:
+
+    // Functions of the form: fun (a, b, c, ...) -> ...
+    // | TupleDecompose(tuple : Expr, args : Var list, body : Expr)
+    let rec (|TupleDecompose|_|) = function
+    | Let(v, TupleGet(t, _), TupleDecompose(t', args, body)) when t = t' -> Some (t, v :: args, body)
+    | Let(v, TupleGet(t, _), body) -> Some (t, [v], body)
+    | _ -> None
+
     // Reflection helpers:
 
     let rec getMethod = function
     | Lambda(_, e)  -> getMethod e
+    | Let(_, _, e)  -> getMethod e
     | Call(_, m, _) -> m
     | other -> failwithf "Unsupported Expr: %A" other
 
@@ -41,6 +53,7 @@ module internal Helpers =
 
     #if NETFX_CORE
     type TypeInfo with
+        member ti.GetMethod(name) = ti.GetDeclaredMethods(name) |> Seq.exactlyOne
         member ti.GetMethod(name, argTypes) =
             ti.GetDeclaredMethods(name) |> Seq.find (argsMatch argTypes)
         member ti.GetConstructor(argTypes) =
@@ -98,3 +111,10 @@ module internal Helpers =
                     | ExpressionType.Convert -> LExpr.Convert(unary.Operand, t) :> _
                     | _ -> LExpr.Convert(e, t) :> _
                 | _ -> LExpr.Convert(e, t) :> _
+
+        static member AssignAll(ps : ParameterExpression seq, array : Expression) : Expression =
+            let var = LExpr.Variable(array.Type)
+            let body = Seq.append (LExpr.Assign(var, array) :> LExpr |> Seq.singleton)
+                       <| Seq.mapi (fun i p ->
+                            LExpr.Assign(p, LExpr.Convert(LExpr.ArrayAccess(var, [| LExpr.Constant(i) :> LExpr |]), p.Type)) :> LExpr) ps
+            LExpr.Block([| var |], body) :> _
