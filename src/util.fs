@@ -24,10 +24,20 @@ module internal Helpers =
            str |> starts start1
         || str |> starts start2
 
-    let inline toDict keys values =
-        (List.zip keys values).ToDictionary(fst, snd)
-
     // Expr helpers:
+
+    module Expr =
+        // http://www.fssnip.net/1i
+        let rec replace f q = 
+          let q = defaultArg (f q) q
+          match q with
+          | ExprShape.ShapeCombination(a, args) -> 
+              let nargs = args |> List.map (replace f)
+              ExprShape.RebuildShapeCombination(a, nargs)
+          | ExprShape.ShapeLambda(v, body)  -> 
+              Expr.Lambda(v, replace f body)
+          | ExprShape.ShapeVar(v) ->
+              Expr.Var(v)
 
     // Functions of the form: fun (a, b, c, ...) -> ...
     // | TupleDecompose(tuple : Expr, args : Var list, body : Expr)

@@ -33,36 +33,73 @@ type Iso private () =
     static member ofFn([<ReflectedDefinition(true)>] expr : Expr<('a -> 'b)>) : Iso<_,_> =
         match expr with
         | WithValue(:? ('a -> 'b) as fn, _, Lambda(arg, body)) ->
-            let rec visitAll exprs a b = seq { for e in exprs do yield visit e a b }
-            and visit e (a : Dictionary<Var,ParameterExpression>) b : LExpr =
+            let rec visitAll exprs a = seq { for e in exprs do yield visit e a }
+            and visit e (a : Map<Var,LExpr>) : LExpr =
+
+                // Call inversion
+                //  Given a chain of calls, A(B(C(d))) = d'
+                //    where A, B, and C are functions and d is some argument expression,
+                //  the inverse of that is C'(B'(A'(d'))) = d,
+                //    where A', B', and C' are the inverse functions of A, B, and C respectively.
+                let rec (|Invert|_|) = function
+                    | SpecificCall <@@ (|>) @@> (_, _, [Invert(e,_); _]) as skipped -> Some (e, Some skipped)
+                    | SpecificCall <@@ (|>) @@> (_, _, [e; _]) as skipped -> Some (e, Some skipped)
+
+                    // 1 argument
+                    | Call(_, _, [Invert(e,_)]) as skipped -> Some (e, Some skipped)
+                    | Call(_, _, [e]) as skipped -> Some (e, Some skipped)
+                    | NewUnionCase(_, [Invert(e,_)]) as skipped -> Some (e, Some skipped)
+                    | NewUnionCase(_, [e]) as skipped -> Some (e, Some skipped)
+
+                    // 2 arguments
+                    | Call(_, _, [_; Invert(e,_)]) as skipped -> Some (e, Some skipped)
+                    | Call(_, _, [_; e]) as skipped -> Some (e, Some skipped)
+                    | NewUnionCase(_, [_; Invert(e,_)]) as skipped -> Some (e, Some skipped)
+                    | NewUnionCase(_, [_; e]) as skipped -> Some (e, Some skipped)
+
+                    | e -> Some (e, None)
+
+                let replace expr inExpr withLExpr =
+                    match inExpr with
+                    | Some(e) ->
+                        let var, newExpr = match expr with
+                                           | Var(v) -> v, e
+                                           | _ ->
+                                                let var = Var("_", expr.Type)
+                                                let varExpr = Expr.Var(var)
+                                                var, e |> Expr.replace (function | x when x = expr -> Some varExpr | _ -> None)
+                        let a = a.Add(var, withLExpr)
+                        visit newExpr a
+                    | _ -> withLExpr
+
                 match e with
                 // Values:
                 | Value(v, _) -> LExpr.Constant(v) :> _
-                | Var(v) when v = arg -> b :> _
-                | Var(v) -> a.[v] :> _
-                | Coerce(e, t) -> LExpr.Retype(visit e a b, t)
-                | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a b) :> _
+                | Var(v) -> a.[v]
+                | Coerce(e, t) -> LExpr.Retype(visit e a, t)
+                | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a) :> _
 
                 // DU:
-                | NewUnionCase(case, [arg]) when typeof<'b> = case.DeclaringType ->
+                | NewUnionCase(case, [Invert(arg, inner)]) ->
                     // The inverse of creating a union with one arg is decomposing the case into the arg
+                    let p = visit arg a
                     let prop = case.GetFields().Single()
-                    LExpr.Property(LExpr.Retype(b, prop.DeclaringType), prop) :> _
+                    LExpr.Property(LExpr.Retype(p, prop.DeclaringType), prop) |> replace arg inner
 
                 // Tuple:
                 // FIXME: Generalize this to other expressions than NewTuple
                 | TupleDecompose(t, args, (NewTuple(exprs) as nt)) when typeof<'b> = nt.Type ->
-                    let inpts = Seq.zip args exprs
-                                |> Seq.map (fun (v, e) -> let p = LExpr.Parameter(e.Type, v.Name) in a.Add(v, p); p)
-                                |> Seq.toList
+                    let inpts, a = Seq.zip args exprs
+                                |> Seq.map (fun (v, e) -> v, LExpr.Parameter(e.Type, v.Name))
+                                |> Seq.mapFold (fun a t -> snd t, a |> Map.add (fst t) (snd t :> LExpr)) a
                     let outps = args |> List.map (fun v -> LExpr.Parameter(v.Type, v.Name))
                     let objs = outps |> List.map (fun p -> LExpr.Convert(p, typeof<obj>) :> LExpr)
                     let makeTuple = typeinfoof<FSharpValue>.GetMethod("MakeTuple")
                     let getTupleFields = typeinfoof<FSharpValue>.GetMethod("GetTupleFields")
                     let body =
                         [
-                            LExpr.AssignAll(inpts, LExpr.Call(getTupleFields, b :> LExpr)) |> Seq.singleton;
-                            Seq.zip outps exprs |> Seq.map (fun (p, e) -> LExpr.Assign(p, visit e a b) :> LExpr);
+                            LExpr.AssignAll(inpts, LExpr.Call(getTupleFields, visit t a)) |> Seq.singleton;
+                            Seq.zip outps exprs |> Seq.map (fun (p, e) -> LExpr.Assign(p, visit e a) :> LExpr);
                             LExpr.Convert(LExpr.Call(makeTuple, LExpr.NewArrayInit(typeof<obj>, objs), LExpr.Constant(t.Type)), t.Type) :> LExpr |> Seq.singleton
                         ]
                         |> Seq.concat
@@ -73,26 +110,28 @@ type Iso private () =
 
                 | Let(v, body, following) ->
                     let p = LExpr.Parameter(v.Type, v.Name)
-                    a.Add(v, p)
-                    let res = LExpr.Block([| p |], LExpr.Assign(p, visit body a b), visit following a b)
-                    a.Remove(v) |> ignore
+                    let a = a.Add(v, p)
+                    let res = LExpr.Block([| p |], LExpr.Assign(p, visit body a), visit following a)
                     res :> _
 
                 // Exceptions:
-                | SpecificCall <@@ raise @@> (_, _, [arg]) -> LExpr.Throw(visit arg a b, e.Type) :> _
-                | SpecificCall <@@ failwith @@> (_, _, [arg]) -> LExpr.Throw(LExpr.New(typeinfoof<Exception>.GetConstructor([| typeof<string> |]), visit arg a b), e.Type) :> _
+                | SpecificCall <@@ raise @@> (_, _, [arg]) -> LExpr.Throw(visit arg a, e.Type) :> _
+                | SpecificCall <@@ failwith @@> (_, _, [arg]) -> LExpr.Throw(LExpr.New(typeinfoof<Exception>.GetConstructor([| typeof<string> |]), visit arg a), e.Type) :> _
 
                 // Control flow:
                 | Lambda(v, e) ->
                     // We swap the argument and return types
                     let p = LExpr.Parameter(e.Type, v.Name)
-                    let d = toDict [v] [p]
-                    LExpr.FSharpFunc(p, visit e d b) :> _
+                    let a = a.Add(v, p)
+                    LExpr.FSharpFunc(p, visit e a) :> _
 
-                | IfThenElse(SpecificCall <@@ (=) @@> (_, _, [Var(v); arg2]), thn, els) when v = arg ->
+                | SpecificCall <@@ (|>) @@> (_, _, [Invert(arg, inner); Lambda(v, body)]) ->
+                    visit body (a.Add(v, visit arg a)) |> replace arg inner
+
+                | IfThenElse(SpecificCall <@@ (=) @@> (_, _, [Var(v) as arg1; arg2]), thn, els) ->
                     // Swap the if and the then
-                    let ifTrue = visit arg2 a b
-                    LExpr.Condition(LExpr.Equal(b, visit thn a b), ifTrue, LExpr.Retype(visit els a b, ifTrue.Type)) :> _
+                    let ifTrue = visit arg2 a
+                    LExpr.Condition(LExpr.Equal(visit arg1 a, visit thn a), ifTrue, LExpr.Retype(visit els a, ifTrue.Type)) :> _
 
                 // Delegate ops:
                 | NewDelegate(t, args, body) ->
@@ -111,53 +150,58 @@ type Iso private () =
                             if gt = typedefof<Func<_,_>> then reverse()
                             else forward()
                         else forward()
-                    LExpr.Lambda(delegateType, visit body (toDict orderedargs argexprs) b, argexprs) :> _
+                    let a = List.zip orderedargs (argexprs |> List.map (fun p -> p :> LExpr)) |> Map.ofList
+                    LExpr.Lambda(delegateType, visit body a, argexprs) :> _
 
                 // Numerical ops:
-                | SpecificCall <@@ (+) @@> (_, _, [arg1; arg2]) -> LExpr.Subtract((visit arg1 a b), (visit arg2 a b)) :> _
-                | SpecificCall <@@ (-) @@> (_, _, [arg1; arg2]) -> LExpr.Add((visit arg1 a b), (visit arg2 a b)) :> _
-                | SpecificCall <@@ (*) @@> (_, _, [arg1; arg2]) -> LExpr.Divide((visit arg1 a b), (visit arg2 a b)) :> _
-                | SpecificCall <@@ (/) @@> (_, _, [arg1; arg2]) -> LExpr.Multiply((visit arg1 a b), (visit arg2 a b)) :> _
+                | SpecificCall <@@ (+) @@> (_, _, [arg1; arg2]) -> LExpr.Subtract((visit arg1 a), (visit arg2 a)) :> _
+                | SpecificCall <@@ (-) @@> (_, _, [arg1; arg2]) -> LExpr.Add((visit arg1 a), (visit arg2 a)) :> _
+                | SpecificCall <@@ (*) @@> (_, _, [arg1; arg2]) -> LExpr.Divide((visit arg1 a), (visit arg2 a)) :> _
+                | SpecificCall <@@ (/) @@> (_, _, [arg1; arg2]) -> LExpr.Multiply((visit arg1 a), (visit arg2 a)) :> _
 
                 // Object ops:
                 | Call(Some t, mi, []) when mi.Name = "ToString" && isConvertible t.Type ->
                     LExpr.Convert(LExpr.Call(typeinfoof<Convert>.GetMethod("ChangeType", [| typeof<obj>; typeof<Type> |]),
-                                             LExpr.Convert(visit t a b, typeof<obj>), LExpr.Constant(t.Type)), t.Type) :> _
+                                             LExpr.Convert(visit t a, typeof<obj>), LExpr.Constant(t.Type)), t.Type) :> _
 
                 // String ops:
                 | Call(Some t, mi, args) when t.Type = typeof<string> && (mi.Name |> startsEither "ToUpper" "ToLower") ->
                     let name = (if mi.Name |> starts "ToUpper" then "ToLower" else "ToUpper") + mi.Name.Substring(7)
-                    LExpr.Call((visit t a b), typeinfoof<string>.GetMethod(name, mi.GetParameters() |> Array.map (fun p -> p.ParameterType))) :> _
-                | SpecificCall <@@ String.Join @@> (_, _, [sep; strs]) ->
-                    let sepexpr = visit sep a b
+                    LExpr.Call((visit t a), typeinfoof<string>.GetMethod(name, mi.GetParameters() |> Array.map (fun p -> p.ParameterType))) :> _
+                | SpecificCall <@@ String.Join @@> (_, _, [sep; Invert(strs, inner)]) ->
+                    let sepexpr = visit sep a
+                    let b = visit strs a
                     // We need to check if we're joining on the empty string,
                     //  becuase in that case, string.Split is *not* the inverse
-                    let results = LExpr.Condition(LExpr.Equal(sepexpr, LExpr.Constant("")),
-                                    // Array.map (fun c -> c.ToString()) (b.ToCharArray())
-                                    LExpr.Call(getGenericMethod <@@ Array.map @@> [| typeof<char>; typeof<string> |],
-                                        LExpr.Constant(fun (c : char) -> c.ToString()), LExpr.Call(b, typeinfoof<string>.GetMethod("ToCharArray", [||]))),
-                                    // str.Split([| sepexpr |], StringSplitOptions.None)
-                                    LExpr.Call(b, typeinfoof<string>.GetMethod("Split", [| typeof<string[]>; typeof<StringSplitOptions> |]),
-                                        LExpr.NewArrayInit(typeof<string>, sepexpr), LExpr.Constant(StringSplitOptions.None))) :> LExpr
-                    (visit strs a results)
+                    LExpr.Condition(LExpr.Equal(sepexpr, LExpr.Constant("")),
+                        // Array.map (fun c -> c.ToString()) (b.ToCharArray())
+                        LExpr.Call(getGenericMethod <@@ Array.map @@> [| typeof<char>; typeof<string> |],
+                            LExpr.Constant(fun (c : char) -> c.ToString()), LExpr.Call(b, typeinfoof<string>.GetMethod("ToCharArray", [||]))),
+                        // str.Split([| sepexpr |], StringSplitOptions.None)
+                        LExpr.Call(b, typeinfoof<string>.GetMethod("Split", [| typeof<string[]>; typeof<StringSplitOptions> |]),
+                            LExpr.NewArrayInit(typeof<string>, sepexpr), LExpr.Constant(StringSplitOptions.None))) |> replace strs inner
 
                 // Array ops:
                 #if !NETFX_CORE
-                | SpecificCall <@@ Array.ConvertAll @@> (_, _, [array; converter])
+                | SpecificCall <@@ Array.ConvertAll @@> (_, _, [Invert(array, inner); converter])
                 #endif
-                | SpecificCall <@@ Array.map @@> (_, _, [converter; array]) ->
-                    let arrayexpr  = visit array a b
-                    let mutable ce = visit converter a b
+                | SpecificCall <@@ Array.map @@> (_, _, [converter; Invert(array, inner)]) ->
+                    let arrayexpr  = visit array a
+                    let mutable ce = visit converter a
                     #if !NETFX_CORE
                     if ce.Type.GetGenericTypeDefinition() = typedefof<Converter<_,_>> then
                         ce <- LExpr.Call(typedefof<FSharpFunc<_,_>>.MakeGenericType(ce.Type.GetGenericArguments()).GetMethod("FromConverter"), ce)
                     #endif
                     LExpr.Call(
                         ce.Type.GenericTypeArguments |> getGenericMethod <@@ Array.map @@>,
-                        ce, arrayexpr) :> _
-                
+                        ce, arrayexpr) |> replace array inner
+
+                // Easily invertible ops in the collections modules:
+                | SpecificCall <@@ Map.ofSeq @@> (_, _, [Invert(arg, inner)]) as call ->
+                    LExpr.Call(call.Type.GenericTypeArguments |> getGenericMethod <@@ Map.toSeq @@>, visit arg a) |> replace arg inner
+
                 | other -> failwithf "Unsupported expr: %A" other
             let b = LExpr.Parameter(typeof<'b>)
-            let del = LExpr.Lambda<Func<'b,'a>>(visit body (Dictionary<_,_>()) b, b).Compile()
+            let del = LExpr.Lambda<Func<'b,'a>>(visit body (Map.ofList [(arg, b :> LExpr)]), b).Compile()
             fn, del.Invoke
         | other -> failwithf "Cannot determine inverse for expr: %A" other

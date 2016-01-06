@@ -1,6 +1,7 @@
 ﻿namespace SharpBoomerang.Tests
 
 open System
+open System.Linq
 open NUnit.Framework
 
 open SharpBoomerang
@@ -9,6 +10,7 @@ type DU =
     | DUStr of string
     | DUFloat of float
     | DUList of DU seq
+    | DUMap of Map<string,int>
 
 [<TestFixture>]
 type IsoTests() =
@@ -88,6 +90,32 @@ type IsoTests() =
         |> ignore
 
     [<Test>]
+    member x.MapOfSeqImplicit() =
+        let pipe = Channel.pipe() |> write (seq { yield ("one", 1); yield ("two", 2); yield ("three", 3) })
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun s -> DUMap(Map.ofSeq s)))
+                  |> assertRead (Map.ofSeq [ ("one", 1); ("two", 2); ("three", 3) ] |> DUMap) "#1"
+                  |> write (Map.ofSeq [ ("four", 4); ("five", 5); ("six", 6) ] |> DUMap)
+        // F# map impl stores keys sorted
+        Assert.That(Enumerable.SequenceEqual([ ("five", 5); ("four", 4); ("six", 6) ], pipe.Value.Value), "#2")
+        map
+        |> assertRead (Map.ofSeq [ ("four", 4); ("five", 5); ("six", 6) ] |> DUMap) "#4"
+        |> ignore
+
+    [<Test>]
+    member x.MapOfSeqPipeImplicit() =
+        let pipe = Channel.pipe() |> write (seq { yield ("one", 1); yield ("two", 2); yield ("three", 3) })
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun s -> s |> Map.ofSeq |> DUMap))
+                  |> assertRead (Map.ofSeq [ ("one", 1); ("two", 2); ("three", 3) ] |> DUMap) "#1"
+                  |> write (Map.ofSeq [ ("four", 4); ("five", 5); ("six", 6) ] |> DUMap)
+        // F# map impl stores keys sorted
+        Assert.That(Enumerable.SequenceEqual([ ("five", 5); ("four", 4); ("six", 6) ], pipe.Value.Value), "#2")
+        map
+        |> assertRead (Map.ofSeq [ ("four", 4); ("five", 5); ("six", 6) ] |> DUMap) "#4"
+        |> ignore
+
+    [<Test>]
     member x.StrIntArrayMapImplicit() =
         let pipe = Channel.pipe() |> write [| 1; 2; 3 |]
         let map = pipe
@@ -137,6 +165,18 @@ type IsoTests() =
         |> ignore
 
     [<Test>]
+    member x.UnionCaseImplicitPipeRight() =
+        let pipe = Channel.pipe() |> write "hello"
+        let map = pipe
+                  |> Channel.map(Iso.ofFn (fun s -> s |> DUStr))
+                  |> assertRead (DUStr("hello")) "#1"
+                  |> write (DUStr("bye"))
+        Assert.AreEqual("bye", pipe.Value.Value, "#2")
+        map
+        |> assertRead (DUStr("bye")) "#3"
+        |> ignore
+
+    [<Test>]
     member x.TupleImplicit1() =
         let pipe = Channel.pipe() |> write ("a", "B")
         let map = pipe
@@ -159,4 +199,3 @@ type IsoTests() =
         map
         |> assertRead ("3", "4", "B") "#3"
         |> ignore
-      
