@@ -1,4 +1,9 @@
-﻿(**
+﻿(*** hide ***)
+#load @"../SharpBoomerang.fsx"
+open System
+open SharpBoomerang
+
+(**
 Channels and Isomorphisms
 =========================
 
@@ -9,32 +14,12 @@ TL;DR it's a function, `'a -> 'b`, and its inverse, `'b -> 'a`
 
 [0]: https://en.wikipedia.org/wiki/Isomorphism
 
-Say what?
----------
+Isos
+----
 
 In SharpBoomerang, isomorphisms are represented by this type:
 
     type Iso<'a,'b> = ('a -> 'b) * ('b -> 'a)
-
-That type and other functions for working with it is defined in iso.fs. It depends on some utilities in util.fs.
-*)
-#load @"../src/util.fs"
-#load @"../src/iso.fs"
-
-(**
-Channels are defined in channel.fs. We'll talk more about those later.
-*)
-#load @"../src/channel.fs"
-
-(**
-We'll also want to open a couple namespaces:
-*)
-open System
-open SharpBoomerang
-
-(**
-Isos
-----
 
 Let's take numerical addition, whose inverse is simply subtraction. 
 Here's an isomorphism representing adding one to a number (and subtracting it):

@@ -14,10 +14,7 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.
 
 The first thing we need to do is to load the source files we'll be using:
 *)
-#load @"../src/util.fs"
-#load @"../src/iso.fs"
-#load @"../src/channel.fs"
-#load @"../src/boomerang.fs"
+#load @"../SharpBoomerang.fsx"
 
 (**
 Then, open the SharpBoomerang namespaces to bring its functions into the global scope:
@@ -27,21 +24,27 @@ open SharpBoomerang.Combinators
 
 (**
 
-## Hello World
+## Hello, World!
 
-Okay, now that we're set up, here's how you'd write a boomerang for "Hello World!":
+Okay, now that we're set up, here's how you'd write a boomerang for "Hello, World!":
 *)
 
-let bhello = blit %"Hello World!"
+let bhello =
+    blit %"Hello" >>       // boomerang the literal string, "Hello"
+    ~~(blit %",") %true >> // then, optionally parse a comma (",") -- "%true" means it will always be printed
+    !+(bws %' ') >>        // parse one or more whitespace characters -- when printing, it will print one space
+    blit %"World!"         // boomerang the literal string, "World!"
 
 (**
 By convention, boomerangs start with the letter "b." `blit` is the boomerang for
 parsing/printing a literal value. To be more specific, `blit` reads from its channel and
-then either parses expecting to find the given string, or prints the string. The percent
-sign (%) prefix operator creates a read-only channel that holds a constant value.
+then either parses, expecting to find the given string, or prints the string. The percent
+sign (%) prefix operator creates a read-only channel that holds a constant value. (We'll
+talk more about channels later.)
 
-On a side note, instead of "parsing/printing," we'll just say "parsing" from now on,
-but all constructs can do either.
+Similarly, the `bws` boomerang parses a whitespace character and writes that to its channel.
+When printing, it reads a character from the channel and prints that character. Most boomerangs
+accept a channel argument and use it in this fashion.
 
 As a simple example, let's see how we can parse "Hello World!" using that boomerang:
 *)
@@ -50,19 +53,20 @@ bhello |> parseFromStr "Hello World!"
 
 (**
 Run that annnddd... nothing happens. However, if you try changing the "Hello World!" string
-passed to `parseFromStr`, you'll get an exception because the parse failed.
+to something like "foobar", you'll get an exception because the parse failed.
 
 Just for completeness, here's the printer for that:
 *)
 
-bhello |> printToStr // -> "Hello World!"
+bhello |> printToStr // -> "Hello, World!"
 
 (**
 
 ## Parsing a Name
 
-Cool, so let's actually do something interesting. Let's make a simple parser to
-parse a first and last name separated by whitespace, possibly with a title beforehand.
+The "Hello, World!" example illustrated how we can write a parser to validate some input.
+However, often, you will want to extract some _data_ from the input. Let's make a simple parser
+to parse a first and last name separated by whitespace, possibly with a title beforehand.
 
 Side note: In the real world, the format of names varies wildly. This is not meant to be a
 comprehensive parser, only a simple example.
@@ -114,18 +118,29 @@ Now let's try the printer:
 btitle1 |> printToStr
 
 (**
-Uh oh! That always prints "Mr" no matter what. To see why this is, we need to talk a
-little more about channels.
+Oh no! That always prints "Mr" no matter what. To see why this is, we need to talk a little more
+about channels.
 
 ### Channels
 
-Generally, boomerangs write to their given channel when parsing, and read from the channel
-when printing. So what's happening is that the first `blit` boomerang reads the string
-"Mr" from its channel and prints it. Then, because it succeeded, the `<|>` operator
-does not execute any of the other boomerangs.
+Let's take a look at how the `Boomerang` types are defined:
+*)
 
-What we really want is to expose a channel from our title boomerang to which the parsed result
-will be written and from which the value to print will be read.
+type Boomerang = Context -> Context
+type Boomerang<'t> = 't channel -> Boomerang
+
+(**
+Our `bhello` boomerang from the first example is an instance of the first, non-generic `Boomerang` type.
+As we said, this type basically validates some input. The second type of boomerang operates on some data.
+For instance, the `bstr` built-in boomerang non-greedily parses a string. Thus its type is `Boomerang<string>`,
+and it accepts a `string channel` as its first argument. When parsing, `bstr` writes the string that it parsed
+into its channel. When printing, `bstr` reads a string from its channel and prints that. Most boomerangs behave
+in this manner.
+
+So the reason our previous example always prints "Mr" is that the first `blit` boomerang reads the string
+"Mr" from its channel and prints it. Then, because it succeeded, the `<|>` operator does not execute any
+of the other boomerangs. In fact, you'll notice that our `btitle1` is typed `Boomerang`. What we really want
+is to expose a channel to which the parsed result will be written and from which the value to print will be read.
 
 To do this, we'll use the channel-propagating first-successful-parse operator, `<.>`. That operator
 behaves the same as `<|>`, except that it exposes the successful parse on a channel that you pass
@@ -182,7 +197,18 @@ Note that we removed the `<??` operator because we no longer care about the stri
 
 Now the type of `btitle3` is `Boomerang<Title>` and this is looking much more useful! However,
 this is kinda boilerplate-- parsing a discriminated union where none of the cases have arguments
-is pretty common, and we have a built-in boomerang for that: `bdu<Title>`.
+is pretty common, and we have a built-in boomerang for that: `bdu<Title>`
+
+Let's make our final boomerang for the title, also accepting an optional period (".") and whitespace after it:
+*)
+
+let bspace = !+(bws %' ') // Parses one or more whitespace characters; prints a single space, ' '
+let btitle = ~~~(bdu<Title> .>> ~~(blit %".") %true .>> bspace)
+
+(**
+Note that the `~~~` prefix operator makes its contents optional, and the `.>>` operator takes a
+`Boomerang<'t>` and `Boomerang` in sequence resulting in a `Boomerang<'t>`. So the final type of
+our `btitle` boomerang is `Boomerang<Title option>`.
 
 ### Operators and Combinators
 
@@ -192,12 +218,10 @@ how this basically works. You've seen the built-in combinator, `blit`, for liter
 also just introduced `bdu<'a>` for discriminated unions. There are more of these, including `bws`
 for parsing whitespace, and `bstr` for parsing a non-greedy arbitrary string of characters.
 
-Putting these all together, let's "cut to the chase" and define the full boomerangs for parsing
+Putting these all together, let's cut to the chase and define the full boomerang for parsing
 our name:
 *)
 
-let bspace = !+(bws %' ') // one or more whitespace character (when printing, prints single space: ' ')
-let btitle = ~~~(bdu<Title> .>> ~~(blit %".") %true .>> bspace)
 let bname = btitle .>>. bstr .>> bspace .>>. bstr .>>% ((fun (t, f, l) -> { Title = t; First = f; Last = l }), (fun n -> (n.Title, n.First, n.Last)))
 
 let parseName = StringInputChannel >> parser bname
@@ -208,17 +232,14 @@ printName einstein
 
 
 (**
-Breaking it down, the `.>>` operator sequentially applies the left and then the right boomerang,
-propagating the channel from the left. When we say "propagating," we mean exposing that channel
-in the resulting function. As a rule of thumb, operators with dots (.) expose the channel(s)
-from the boomerang(s) that are adjacent to the dot(s). For instance, the `.>>.` operator exposes
-the channels from both boomerangs as a tuple. The `.>>%` maps the channel from the left
-boomerang using an `Iso`. See `ChannelsAndIsos.fsx` for more about that.
+We've already seen the `.>>` operator, which sequentially applies the left and then the right boomerang,
+propagating the channel from the left. When we say "propagating," we mean exposing that channel in the
+resulting function. As a rule of thumb, operators with dots (.) expose the channel(s) from the boomerang(s)
+that are adjacent to the dot(s). For instance, the `.>>.` operator exposes the channels from both boomerangs
+as a tuple. The `.>>%` maps the channel from the left boomerang using an `Iso`, which is how the type of
+`bname` is `Boomerang<Name>`. See `ChannelsAndIsos.fsx` for more information about that.
 
-Next, the `~~` operator is the optional operator. The boomerang to which it is applied becomes
-optional to parse, and the exposed boolean channel determines whether that boomerang is printed.
-Finally, `~~~` is the channel-propagating optional operator, which turns a `Boomerang<'a>` into
-`Boomerang<'a option>`.
+To be continued.
 *)
 
 

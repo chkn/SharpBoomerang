@@ -205,3 +205,28 @@ type BoomerangTests() =
             bjlist
         let print = stringPrinter bjson
         Assert.AreEqual("[5,6,\"Hello\\nWorld\"]", print(DUList([| DUFloat(5.0); DUFloat(6.0); DUStr("Hello\nWorld") |])))
+
+    [<Test>]
+    member __.TupleList() =
+        let bpair = bstr .>>. bpint
+        testCh (bslist bpair (bws %' ')) [| ("a", 1); ("b", 2); ("c", 3) |] "a1 b2 c3"
+
+    [<Test>]
+    member __.GreedyRepeatRecursive() =
+        let rec blst lst = !+.brec .>>% Iso.ofFn(fun l -> DUList l) <| lst
+        and brec =
+            blst    <.>
+            (bstr   .>>% Iso.ofFn(fun s -> DUStr s)) <.>
+            (bfloat .>>% Iso.ofFn(fun n -> DUFloat n))
+        let print = stringPrinter brec
+        Assert.AreEqual("aaa456bbb321", print(DUList([| DUStr("aaa"); DUFloat(456.0); DUStr("bbb"); DUFloat(321.0) |])))
+
+    [<Test>]
+    member __.SListRecursive() =
+        let rec blst lst = bslist brec (blit %",") .>>% Iso.ofFn(fun l -> DUList l) <| lst
+        and brec =
+            blst    <.>
+            (bstr   .>>% Iso.ofFn(fun s -> DUStr s)) <.>
+            (bfloat .>>% Iso.ofFn(fun n -> DUFloat n))
+        let print = stringPrinter brec
+        Assert.AreEqual("aaa,456,bbb,321", print(DUList([| DUStr("aaa"); DUFloat(456.0); DUStr("bbb"); DUFloat(321.0) |])))

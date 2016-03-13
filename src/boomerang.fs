@@ -165,19 +165,25 @@ module Combinators =
 
     // KLUDGE: Nasty, but gets the job done
     //  Technique thanks to http://stackoverflow.com/a/2812306/578190
-    type __TupleBoomerang =
-        static member Append(l : Boomerang<_>, r : Boomerang<_>, ch : IChannel<_>) =
-            let lch, rch = Channel.map2 (fun (a, _) -> a) (fun (_, b) -> b) (fun a b -> (a, b)) ch
-            l lch >> r rch
-        static member Append(l : Boomerang<(_ * _)>, r : Boomerang<_>, ch : IChannel<_>) =
-            let lch, rch = Channel.map2 (fun (a, b, _) -> (a, b)) (fun (_, _, c) -> c) (fun (a, b) c -> (a, b, c)) ch
-            l lch >> r rch
+    type __TupleBoomerang private () =
+        static let append l r (ch : IChannel<_>) (ctx : Context) (lch, rch) =
+            let mark = if ctx.Type = Printing then ch.Mark() else null
+            let ctx2 = l lch ctx
+            if mark <> null then
+                mark.Rewind()
+                mark.Dispose()
+            r rch ctx2
+        static member Append(l : Boomerang<_>, r : Boomerang<_>, ch : IChannel<_>, ctx : Context) =
+            append l r ch ctx <| Channel.map2 (fun (a, _) -> a) (fun (_, b) -> b) (fun a b -> (a, b)) ch
 
-    let inline __tupleBoomerangAppend_< ^t, ^a, ^b, ^c, ^d when (^t or ^a) : (static member Append : ^a * ^b * ^c -> ^d)> a b c =
-        ((^t or ^a) : (static member Append : ^a * ^b * ^c -> ^d) (a, b, c))
+        static member Append(l : Boomerang<(_ * _)>, r : Boomerang<_>, ch : IChannel<_>, ctx : Context) =
+            append l r ch ctx <| Channel.map2 (fun (a, b, _) -> (a, b)) (fun (_, _, c) -> c) (fun (a, b) c -> (a, b, c)) ch
+
+    let inline __tupleBoomerangAppend_< ^t, ^a, ^b, ^c, ^d, ^e when (^t or ^a) : (static member Append : ^a * ^b * ^c * ^d -> ^e)> a b c d =
+        ((^t or ^a) : (static member Append : ^a * ^b * ^c * ^d -> ^e) (a, b, c, d))
 
     // Sequentially calls left and right, combining the channels into a tuple channel
-    let inline (.>>.) l r ch = __tupleBoomerangAppend_<__TupleBoomerang, _, _, _, _> l r ch
+    let inline (.>>.) l r ch ctx = __tupleBoomerangAppend_<__TupleBoomerang, _, _, _, _, _> l r ch ctx
 
     /// First tries the left boomerang and then the right
     let (<|>) (l : Boomerang) (r : Boomerang) (ctx : Context) =
@@ -343,7 +349,10 @@ module Combinators =
     /// Channel-propagating greedy one or more operator. Continues to match the given boomerang
     ///  until it fails.
     let (!+.) (l : Boomerang<'t>) (matched : IChannel<'t seq>) (ctx : Context) =
-        let collector = matched |> Channel.decomposeSeq (fun _ -> false)
+        // We must do a dummy read of the channel to prevent infinite recursion when printing
+        //  with some recursive boomerangs
+        if ctx.Type = Printing then Channel.ensureReadable matched
+        let collector = Channel.decomposeSeq (fun _ -> false) matched
         let mutable nctx = l collector ctx
         let mutable mark = Unchecked.defaultof<IMark>
         try
@@ -462,6 +471,9 @@ module Combinators =
     /// Boomerangs the given boomerang repeatedly, separated by the given separator
     ///  Similar to the channel-propagating greedy one or more operator (!+.), but with the given separator
     let bslist (l : Boomerang<'t>) (s : Boomerang) (list : IChannel<'t seq>) (ctx : Context) =
+        // We must do a dummy read of the channel to prevent infinite recursion when printing
+        //  with some recursive boomerangs
+        if ctx.Type = Printing then Channel.ensureReadable list
         let collector = Channel.decomposeSeq (fun _ -> false) list
         let mutable nctx = l collector ctx
         let mutable mark = Unchecked.defaultof<IMark>

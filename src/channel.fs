@@ -95,6 +95,20 @@ type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool)
     let buf = List<'t>()
     let mutable i = 0
     let mutable marks = 0
+    let rec read ret tryFillBuffer =
+        if i < buf.Count then
+            let v = buf.[i]
+            if marks <= 0 then
+                buf.RemoveRange(0, i + 1)
+                i <- 0
+            else
+                i <- i + 1
+            ret v
+        elif tryFillBuffer then
+            ch.Read(fun v ->
+                buf.AddRange(v)
+                read ret false
+            )
     new(ch : IChannel<'t array>, shouldFlush : List<'t> -> bool) =
         DecomposeChannel(
             {
@@ -113,20 +127,7 @@ type DecomposeChannel<'t>(ch : IChannel<'t seq>, shouldFlush : List<'t> -> bool)
         buf.Add(v)
         if shouldFlush buf then
             this.Flush()
-    member this.Read ret =
-        let pop() =
-            let v = buf.[i]
-            if marks <= 0 then
-                buf.RemoveRange(0, i + 1)
-                i <- 0
-            else
-                i <- i + 1
-            ret v
-        if i < buf.Count then pop() else
-        ch.Read(fun v ->
-            buf.AddRange(v)
-            if i < buf.Count then pop()
-        )
+    member this.Read ret = read ret true
     member this.Mark() =
         let mark = i
         let submark = if i >= buf.Count then ch.Mark() else null
@@ -185,6 +186,15 @@ module Channel =
                 member __.Mark()   = ch.Mark()
         }
 
+    /// Tries to read from the given channel and then resets the channel
+    ///  to its state prior to the read.
+    let ensureReadable (ch : IChannel<_>) =
+        use mark = ch.Mark()
+        try
+            ch.Read(ignore)
+        finally
+            mark.Rewind()
+
     /// Reads a number from the first channel, and then collects that number of values from second channel
     let collect (cnt : int channel) (ch : IChannel<'t>) =
         {
@@ -216,8 +226,8 @@ module Channel =
                 member __.Mark() = ch.Mark()
         }
 
-    let decomposeSeq shouldFlush (ch : IChannel<'t seq>) = DecomposeChannel(ch, shouldFlush)
-    let decomposeArray shouldFlush (ch : IChannel<'t array>) = DecomposeChannel(ch, shouldFlush)
+    let inline decomposeSeq shouldFlush (ch : IChannel<'t seq>) = DecomposeChannel(ch, shouldFlush)
+    let inline decomposeArray shouldFlush (ch : IChannel<'t array>) = DecomposeChannel(ch, shouldFlush)
 
     type private ExpectChannel<'t>(ch : 't channel, check : ('t -> unit) -> 't -> unit) =
         interface IChannel<'t> with
@@ -248,6 +258,11 @@ module Channel =
                 member __.Mark()   = ch.Mark()
         }
 
+    /// Maps one channel into 2 separate channels using 3 functions.
+    ///  The returned channels exhibit the following behavior:
+    ///    - Both channels must be written before the underlying channel is written.
+    ///    - Both channels read from the underlying channel; a read from one of the returned
+    ///       channels will affect the value of the next read from the other.
     let map2 f1 f2 f3 (ch : IChannel<_>) =
         let mutable holder1 = None
         let mutable holder2 = None

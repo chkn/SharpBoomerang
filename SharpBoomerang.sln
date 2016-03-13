@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
+# Visual Studio 2012
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SharpBoomerang", "SharpBoomerang.fsproj", "{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "SharpBoomerang", "SharpBoomerang.fsproj", "{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "tests", "tests\tests.fsproj", "{A5755306-95EA-4185-A64C-4C14E1D79E75}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "tests", "tests\tests.fsproj", "{A5755306-95EA-4185-A64C-4C14E1D79E75}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A5755306-95EA-4185-A64C-4C14E1D79E75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A5755306-95EA-4185-A64C-4C14E1D79E75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5755306-95EA-4185-A64C-4C14E1D79E75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5755306-95EA-4185-A64C-4C14E1D79E75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8670D29-B652-4C57-BB2E-EDA2BAB662CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
