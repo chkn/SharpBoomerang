@@ -55,14 +55,8 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.</p>
 <p>The first thing we need to do is to load the source files we'll be using:</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="prep">#load</span> <span class="s">@&quot;../src/util.fs&quot;</span>
-<span class="prep">#load</span> <span class="s">@&quot;../src/iso.fs&quot;</span>
-<span class="prep">#load</span> <span class="s">@&quot;../src/channel.fs&quot;</span>
-<span class="prep">#load</span> <span class="s">@&quot;../src/boomerang.fs&quot;</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="prep">#load</span> <span class="s">@&quot;../SharpBoomerang.fsx&quot;</span>
 </code></pre></td>
 </tr>
 </table>
@@ -78,50 +72,61 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.</p>
 </tr>
 </table>
 
-<h2>Hello World</h2>
+<h2>Hello, World!</h2>
 
-<p>Okay, now that we're set up, here's how you'd write a boomerang for "Hello World!":</p>
+<p>Okay, now that we're set up, here's how you'd write a boomerang for "Hello, World!":</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+<span class="l">4: </span>
+<span class="l">5: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="f">bhello</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Hello World!&quot;</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="f">bhello</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Hello&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span>       <span class="c">// boomerang the literal string, &quot;Hello&quot;</span>
+    <span class="o">~~</span>(<span onmouseout="hideTip(event, 'fs4', 6)" onmouseover="showTip(event, 'fs4', 6)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;,&quot;</span>) <span class="o">%</span><span class="k">true</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span class="c">// then, optionally parse a comma (&quot;,&quot;) -- &quot;%true&quot; means it will always be printed</span>
+    <span class="o">!+</span>(<span onmouseout="hideTip(event, 'fs5', 7)" onmouseover="showTip(event, 'fs5', 7)" class="f">bws</span> <span class="o">%</span><span class="s">&#39; &#39;</span>) <span class="o">&gt;</span><span class="o">&gt;</span>        <span class="c">// parse one or more whitespace characters -- when printing, it will print one space</span>
+    <span onmouseout="hideTip(event, 'fs4', 8)" onmouseover="showTip(event, 'fs4', 8)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;World!&quot;</span>         <span class="c">// boomerang the literal string, &quot;World!&quot;</span>
 </code></pre></td>
 </tr>
 </table>
 
 <p>By convention, boomerangs start with the letter "b." <code>blit</code> is the boomerang for
 parsing/printing a literal value. To be more specific, <code>blit</code> reads from its channel and
-then either parses expecting to find the given string, or prints the string. The percent
-sign (%) prefix operator creates a read-only channel that holds a constant value.</p>
+then either parses, expecting to find the given string, or prints the string. The percent
+sign (%) prefix operator creates a read-only channel that holds a constant value. (We'll
+talk more about channels later.)</p>
 
-<p>On a side note, instead of "parsing/printing," we'll just say "parsing" from now on,
-but all constructs can do either.</p>
+<p>Similarly, the <code>bws</code> boomerang parses a whitespace character and writes that to its channel.
+When printing, it reads a character from the channel and prints that character. Most boomerangs
+accept a channel argument and use it in this fashion.</p>
 
 <p>As a simple example, let's see how we can parse "Hello World!" using that boomerang:</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 6)" onmouseover="showTip(event, 'fs3', 6)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs5', 7)" onmouseover="showTip(event, 'fs5', 7)" class="f">parseFromStr</span> <span class="s">&quot;Hello World!&quot;</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 9)" onmouseover="showTip(event, 'fs3', 9)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs6', 10)" onmouseover="showTip(event, 'fs6', 10)" class="f">parseFromStr</span> <span class="s">&quot;Hello World!&quot;</span>
 </code></pre></td>
 </tr>
 </table>
 
 <p>Run that annnddd... nothing happens. However, if you try changing the "Hello World!" string
-passed to <code>parseFromStr</code>, you'll get an exception because the parse failed.</p>
+to something like "foobar", you'll get an exception because the parse failed.</p>
 
 <p>Just for completeness, here's the printer for that:</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 8)" onmouseover="showTip(event, 'fs3', 8)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs6', 9)" onmouseover="showTip(event, 'fs6', 9)" class="f">printToStr</span> <span class="c">// -&gt; &quot;Hello World!&quot;</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 11)" onmouseover="showTip(event, 'fs3', 11)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 12)" onmouseover="showTip(event, 'fs7', 12)" class="f">printToStr</span> <span class="c">// -&gt; &quot;Hello, World!&quot;</span>
 </code></pre></td>
 </tr>
 </table>
 
 <h2>Parsing a Name</h2>
 
-<p>Cool, so let's actually do something interesting. Let's make a simple parser to
-parse a first and last name separated by whitespace, possibly with a title beforehand.</p>
+<p>The "Hello, World!" example illustrated how we can write a parser to validate some input.
+However, often, you will want to extract some <em>data</em> from the input. Let's make a simple parser
+to parse a first and last name separated by whitespace, possibly with a title beforehand.</p>
 
 <p>Side note: In the real world, the format of names varies wildly. This is not meant to be a
 comprehensive parser, only a simple example.</p>
@@ -139,15 +144,15 @@ comprehensive parser, only a simple example.</p>
 <span class="l"> 9: </span>
 <span class="l">10: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs7', 10)" onmouseover="showTip(event, 'fs7', 10)" class="t">Title</span> <span class="o">=</span>
-    | <span onmouseout="hideTip(event, 'fs8', 11)" onmouseover="showTip(event, 'fs8', 11)" class="p">Mr</span>
-    | <span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="p">Ms</span>
-    | <span onmouseout="hideTip(event, 'fs10', 13)" onmouseover="showTip(event, 'fs10', 13)" class="p">Dr</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs8', 13)" onmouseover="showTip(event, 'fs8', 13)" class="t">Title</span> <span class="o">=</span>
+    | <span onmouseout="hideTip(event, 'fs9', 14)" onmouseover="showTip(event, 'fs9', 14)" class="p">Mr</span>
+    | <span onmouseout="hideTip(event, 'fs10', 15)" onmouseover="showTip(event, 'fs10', 15)" class="p">Ms</span>
+    | <span onmouseout="hideTip(event, 'fs11', 16)" onmouseover="showTip(event, 'fs11', 16)" class="p">Dr</span>
 
-<span class="k">type</span> <span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="t">Name</span> <span class="o">=</span> {
-    <span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="i">Title</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs12', 16)" onmouseover="showTip(event, 'fs12', 16)" class="t">Title</span> <span onmouseout="hideTip(event, 'fs13', 17)" onmouseover="showTip(event, 'fs13', 17)" class="t">option</span>;
-    <span onmouseout="hideTip(event, 'fs14', 18)" onmouseover="showTip(event, 'fs14', 18)" class="i">First</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs15', 19)" onmouseover="showTip(event, 'fs15', 19)" class="t">string</span>;
-    <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="i">Last</span>  <span class="o">:</span> <span onmouseout="hideTip(event, 'fs15', 21)" onmouseover="showTip(event, 'fs15', 21)" class="t">string</span>;
+<span class="k">type</span> <span onmouseout="hideTip(event, 'fs12', 17)" onmouseover="showTip(event, 'fs12', 17)" class="t">Name</span> <span class="o">=</span> {
+    <span onmouseout="hideTip(event, 'fs13', 18)" onmouseover="showTip(event, 'fs13', 18)" class="i">Title</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs13', 19)" onmouseover="showTip(event, 'fs13', 19)" class="t">Title</span> <span onmouseout="hideTip(event, 'fs14', 20)" onmouseover="showTip(event, 'fs14', 20)" class="t">option</span>;
+    <span onmouseout="hideTip(event, 'fs15', 21)" onmouseover="showTip(event, 'fs15', 21)" class="i">First</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs16', 22)" onmouseover="showTip(event, 'fs16', 22)" class="t">string</span>;
+    <span onmouseout="hideTip(event, 'fs17', 23)" onmouseover="showTip(event, 'fs17', 23)" class="i">Last</span>  <span class="o">:</span> <span onmouseout="hideTip(event, 'fs16', 24)" onmouseover="showTip(event, 'fs16', 24)" class="t">string</span>;
     }
 </code></pre></td>
 </tr>
@@ -164,10 +169,10 @@ literal string. We can use multiple <code>blit</code>s separated by the first-su
 <span class="l">3: </span>
 <span class="l">4: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 22)" onmouseover="showTip(event, 'fs17', 22)" class="f">btitle1</span> <span class="o">=</span>
-    (<span onmouseout="hideTip(event, 'fs4', 23)" onmouseover="showTip(event, 'fs4', 23)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span>) <span class="o">&lt;|&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 24)" onmouseover="showTip(event, 'fs4', 24)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span>) <span class="o">&lt;|&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 25)" onmouseover="showTip(event, 'fs4', 25)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span>)
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs18', 25)" onmouseover="showTip(event, 'fs18', 25)" class="f">btitle1</span> <span class="o">=</span>
+    (<span onmouseout="hideTip(event, 'fs4', 26)" onmouseover="showTip(event, 'fs4', 26)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span>) <span class="o">&lt;|&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 27)" onmouseover="showTip(event, 'fs4', 27)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span>) <span class="o">&lt;|&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 28)" onmouseover="showTip(event, 'fs4', 28)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span>)
 </code></pre></td>
 </tr>
 </table>
@@ -181,7 +186,7 @@ literal string. We can use multiple <code>blit</code>s separated by the first-su
 <span class="l">5: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// should work:</span>
-<span onmouseout="hideTip(event, 'fs17', 26)" onmouseover="showTip(event, 'fs17', 26)" class="f">btitle1</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs5', 27)" onmouseover="showTip(event, 'fs5', 27)" class="f">parseFromStr</span> <span class="s">&quot;Dr&quot;</span>
+<span onmouseout="hideTip(event, 'fs18', 29)" onmouseover="showTip(event, 'fs18', 29)" class="f">btitle1</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs6', 30)" onmouseover="showTip(event, 'fs6', 30)" class="f">parseFromStr</span> <span class="s">&quot;Dr&quot;</span>
 
 <span class="c">// uncomment, should fail:</span>
 <span class="c">//btitle1 |&gt; parseFromStr &quot;Bs&quot;</span>
@@ -196,23 +201,38 @@ only accepts "Mr", "Ms", or "Dr".</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs17', 28)" onmouseover="showTip(event, 'fs17', 28)" class="f">btitle1</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs6', 29)" onmouseover="showTip(event, 'fs6', 29)" class="f">printToStr</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs18', 31)" onmouseover="showTip(event, 'fs18', 31)" class="f">btitle1</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 32)" onmouseover="showTip(event, 'fs7', 32)" class="f">printToStr</span>
 </code></pre></td>
 </tr>
 </table>
 
-<p>Uh oh! That always prints "Mr" no matter what. To see why this is, we need to talk a
-little more about channels.</p>
+<p>Oh no! That always prints "Mr" no matter what. To see why this is, we need to talk a little more
+about channels.</p>
 
 <h3>Channels</h3>
 
-<p>Generally, boomerangs write to their given channel when parsing, and read from the channel
-when printing. So what's happening is that the first <code>blit</code> boomerang reads the string
-"Mr" from its channel and prints it. Then, because it succeeded, the <code>&lt;|&gt;</code> operator
-does not execute any of the other boomerangs.</p>
+<p>Let's take a look at how the <code>Boomerang</code> types are defined:</p>
 
-<p>What we really want is to expose a channel from our title boomerang to which the parsed result
-will be written and from which the value to print will be read.</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs19', 33)" onmouseover="showTip(event, 'fs19', 33)" class="i">Boomerang</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 34)" onmouseover="showTip(event, 'fs20', 34)" class="t">Context</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs20', 35)" onmouseover="showTip(event, 'fs20', 35)" class="t">Context</span>
+<span class="k">type</span> <span onmouseout="hideTip(event, 'fs21', 36)" onmouseover="showTip(event, 'fs21', 36)" class="i">Boomerang</span><span class="o">&lt;</span><span class="o">&#39;</span><span class="i">t</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">&#39;</span><span class="i">t</span> <span onmouseout="hideTip(event, 'fs22', 37)" onmouseover="showTip(event, 'fs22', 37)" class="t">channel</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs21', 38)" onmouseover="showTip(event, 'fs21', 38)" class="i">Boomerang</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>Our <code>bhello</code> boomerang from the first example is an instance of the first, non-generic <code>Boomerang</code> type.
+As we said, this type basically validates some input. The second type of boomerang operates on some data.
+For instance, the <code>bstr</code> built-in boomerang non-greedily parses a string. Thus its type is <code>Boomerang&lt;string&gt;</code>,
+and it accepts a <code>string channel</code> as its first argument. When parsing, <code>bstr</code> writes the string that it parsed
+into its channel. When printing, <code>bstr</code> reads a string from its channel and prints that. Most boomerangs behave
+in this manner.</p>
+
+<p>So the reason our previous example always prints "Mr" is that the first <code>blit</code> boomerang reads the string
+"Mr" from its channel and prints it. Then, because it succeeded, the <code>&lt;|&gt;</code> operator does not execute any
+of the other boomerangs. In fact, you'll notice that our <code>btitle1</code> is typed <code>Boomerang</code>. What we really want
+is to expose a channel to which the parsed result will be written and from which the value to print will be read.</p>
 
 <p>To do this, we'll use the channel-propagating first-successful-parse operator, <code>&lt;.&gt;</code>. That operator
 behaves the same as <code>&lt;|&gt;</code>, except that it exposes the successful parse on a channel that you pass
@@ -229,10 +249,10 @@ We can do this with the <code>&lt;??</code> operator:</p>
 <span class="l">3: </span>
 <span class="l">4: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs18', 30)" onmouseover="showTip(event, 'fs18', 30)" class="f">btitle2</span> <span class="o">=</span>
-    (<span onmouseout="hideTip(event, 'fs4', 31)" onmouseover="showTip(event, 'fs4', 31)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span>) <span class="o">&lt;.&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 32)" onmouseover="showTip(event, 'fs4', 32)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span>) <span class="o">&lt;.&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 33)" onmouseover="showTip(event, 'fs4', 33)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span>)
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs23', 39)" onmouseover="showTip(event, 'fs23', 39)" class="f">btitle2</span> <span class="o">=</span>
+    (<span onmouseout="hideTip(event, 'fs4', 40)" onmouseover="showTip(event, 'fs4', 40)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 41)" onmouseover="showTip(event, 'fs4', 41)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 42)" onmouseover="showTip(event, 'fs4', 42)" class="f">blit</span> <span class="o">&lt;??</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span>)
 </code></pre></td>
 </tr>
 </table>
@@ -249,11 +269,11 @@ enables us to read the title that was parsed and write the title to be printed. 
 <span class="l">4: </span>
 <span class="l">5: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs19', 34)" onmouseover="showTip(event, 'fs19', 34)" class="f">parseTitle2</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 35)" onmouseover="showTip(event, 'fs20', 35)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs21', 36)" onmouseover="showTip(event, 'fs21', 36)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs18', 37)" onmouseover="showTip(event, 'fs18', 37)" class="f">btitle2</span>
-<span onmouseout="hideTip(event, 'fs19', 38)" onmouseover="showTip(event, 'fs19', 38)" class="f">parseTitle2</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs24', 43)" onmouseover="showTip(event, 'fs24', 43)" class="f">parseTitle2</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 44)" onmouseover="showTip(event, 'fs25', 44)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs26', 45)" onmouseover="showTip(event, 'fs26', 45)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs23', 46)" onmouseover="showTip(event, 'fs23', 46)" class="f">btitle2</span>
+<span onmouseout="hideTip(event, 'fs24', 47)" onmouseover="showTip(event, 'fs24', 47)" class="f">parseTitle2</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs22', 39)" onmouseover="showTip(event, 'fs22', 39)" class="f">printTitle2</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 40)" onmouseover="showTip(event, 'fs23', 40)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs18', 41)" onmouseover="showTip(event, 'fs18', 41)" class="f">btitle2</span>
-<span onmouseout="hideTip(event, 'fs22', 42)" onmouseover="showTip(event, 'fs22', 42)" class="f">printTitle2</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs27', 48)" onmouseover="showTip(event, 'fs27', 48)" class="f">printTitle2</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs28', 49)" onmouseover="showTip(event, 'fs28', 49)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs23', 50)" onmouseover="showTip(event, 'fs23', 50)" class="f">btitle2</span>
+<span onmouseout="hideTip(event, 'fs27', 51)" onmouseover="showTip(event, 'fs27', 51)" class="f">printTitle2</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
 </code></pre></td>
 </tr>
 </table>
@@ -275,16 +295,16 @@ union case if the <code>blit</code> boomerang matches, like so:</p>
 <span class="l"> 9: </span>
 <span class="l">10: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs24', 43)" onmouseover="showTip(event, 'fs24', 43)" class="f">btitle3</span> <span class="o">=</span>
-    (<span onmouseout="hideTip(event, 'fs4', 44)" onmouseover="showTip(event, 'fs4', 44)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs8', 45)" onmouseover="showTip(event, 'fs8', 45)" class="p">Mr</span>) <span class="o">&lt;.&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 46)" onmouseover="showTip(event, 'fs4', 46)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs9', 47)" onmouseover="showTip(event, 'fs9', 47)" class="p">Ms</span>) <span class="o">&lt;.&gt;</span>
-    (<span onmouseout="hideTip(event, 'fs4', 48)" onmouseover="showTip(event, 'fs4', 48)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs10', 49)" onmouseover="showTip(event, 'fs10', 49)" class="p">Dr</span>)
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs29', 52)" onmouseover="showTip(event, 'fs29', 52)" class="f">btitle3</span> <span class="o">=</span>
+    (<span onmouseout="hideTip(event, 'fs4', 53)" onmouseover="showTip(event, 'fs4', 53)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Mr&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs9', 54)" onmouseover="showTip(event, 'fs9', 54)" class="p">Mr</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 55)" onmouseover="showTip(event, 'fs4', 55)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Ms&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs10', 56)" onmouseover="showTip(event, 'fs10', 56)" class="p">Ms</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs4', 57)" onmouseover="showTip(event, 'fs4', 57)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;Dr&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs11', 58)" onmouseover="showTip(event, 'fs11', 58)" class="p">Dr</span>)
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs25', 50)" onmouseover="showTip(event, 'fs25', 50)" class="f">parseTitle3</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 51)" onmouseover="showTip(event, 'fs20', 51)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs21', 52)" onmouseover="showTip(event, 'fs21', 52)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs24', 53)" onmouseover="showTip(event, 'fs24', 53)" class="f">btitle3</span>
-<span onmouseout="hideTip(event, 'fs25', 54)" onmouseover="showTip(event, 'fs25', 54)" class="f">parseTitle3</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; Ms</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs30', 59)" onmouseover="showTip(event, 'fs30', 59)" class="f">parseTitle3</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 60)" onmouseover="showTip(event, 'fs25', 60)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs26', 61)" onmouseover="showTip(event, 'fs26', 61)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs29', 62)" onmouseover="showTip(event, 'fs29', 62)" class="f">btitle3</span>
+<span onmouseout="hideTip(event, 'fs30', 63)" onmouseover="showTip(event, 'fs30', 63)" class="f">parseTitle3</span> <span class="s">&quot;Ms&quot;</span> <span class="c">// -&gt; Ms</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs26', 55)" onmouseover="showTip(event, 'fs26', 55)" class="f">printTitle3</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 56)" onmouseover="showTip(event, 'fs23', 56)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs24', 57)" onmouseover="showTip(event, 'fs24', 57)" class="f">btitle3</span>
-<span onmouseout="hideTip(event, 'fs26', 58)" onmouseover="showTip(event, 'fs26', 58)" class="f">printTitle3</span> <span onmouseout="hideTip(event, 'fs9', 59)" onmouseover="showTip(event, 'fs9', 59)" class="p">Ms</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs31', 64)" onmouseover="showTip(event, 'fs31', 64)" class="f">printTitle3</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs28', 65)" onmouseover="showTip(event, 'fs28', 65)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs29', 66)" onmouseover="showTip(event, 'fs29', 66)" class="f">btitle3</span>
+<span onmouseout="hideTip(event, 'fs31', 67)" onmouseover="showTip(event, 'fs31', 67)" class="f">printTitle3</span> <span onmouseout="hideTip(event, 'fs10', 68)" onmouseover="showTip(event, 'fs10', 68)" class="p">Ms</span> <span class="c">// -&gt; &quot;Ms&quot;</span>
 </code></pre></td>
 </tr>
 </table>
@@ -294,7 +314,22 @@ union case if the <code>blit</code> boomerang matches, like so:</p>
 
 <p>Now the type of <code>btitle3</code> is <code>Boomerang&lt;Title&gt;</code> and this is looking much more useful! However,
 this is kinda boilerplate-- parsing a discriminated union where none of the cases have arguments
-is pretty common, and we have a built-in boomerang for that: <code>bdu&lt;Title&gt;</code>.</p>
+is pretty common, and we have a built-in boomerang for that: <code>bdu&lt;Title&gt;</code></p>
+
+<p>Let's make our final boomerang for the title, also accepting an optional period (".") and whitespace after it:</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs32', 69)" onmouseover="showTip(event, 'fs32', 69)" class="f">bspace</span> <span class="o">=</span> <span class="o">!+</span>(<span onmouseout="hideTip(event, 'fs5', 70)" onmouseover="showTip(event, 'fs5', 70)" class="f">bws</span> <span class="o">%</span><span class="s">&#39; &#39;</span>) <span class="c">// Parses one or more whitespace characters; prints a single space, &#39; &#39;</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs33', 71)" onmouseover="showTip(event, 'fs33', 71)" class="f">btitle</span> <span class="o">=</span> <span class="o">~~~</span>(<span onmouseout="hideTip(event, 'fs34', 72)" onmouseover="showTip(event, 'fs34', 72)" class="i">bdu</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs8', 73)" onmouseover="showTip(event, 'fs8', 73)" class="t">Title</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span class="o">~~</span>(<span onmouseout="hideTip(event, 'fs4', 74)" onmouseover="showTip(event, 'fs4', 74)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;.&quot;</span>) <span class="o">%</span><span class="k">true</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 75)" onmouseover="showTip(event, 'fs32', 75)" class="f">bspace</span>)
+</code></pre></td>
+</tr>
+</table>
+
+<p>Note that the <code>~~~</code> prefix operator makes its contents optional, and the <code>.&gt;&gt;</code> operator takes a
+<code>Boomerang&lt;'t&gt;</code> and <code>Boomerang</code> in sequence resulting in a <code>Boomerang&lt;'t&gt;</code>. So the final type of
+our <code>btitle</code> boomerang is <code>Boomerang&lt;Title option&gt;</code>.</p>
 
 <h3>Operators and Combinators</h3>
 
@@ -304,7 +339,7 @@ how this basically works. You've seen the built-in combinator, <code>blit</code>
 also just introduced <code>bdu&lt;'a&gt;</code> for discriminated unions. There are more of these, including <code>bws</code>
 for parsing whitespace, and <code>bstr</code> for parsing a non-greedy arbitrary string of characters.</p>
 
-<p>Putting these all together, let's "cut to the chase" and define the full boomerangs for parsing
+<p>Putting these all together, let's cut to the chase and define the full boomerang for parsing
 our name:</p>
 
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
@@ -314,74 +349,71 @@ our name:</p>
 <span class="l">5: </span>
 <span class="l">6: </span>
 <span class="l">7: </span>
-<span class="l">8: </span>
-<span class="l">9: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs27', 60)" onmouseover="showTip(event, 'fs27', 60)" class="f">bspace</span> <span class="o">=</span> <span class="o">!+</span>(<span onmouseout="hideTip(event, 'fs28', 61)" onmouseover="showTip(event, 'fs28', 61)" class="f">bws</span> <span class="o">%</span><span class="s">&#39; &#39;</span>) <span class="c">// one or more whitespace character (when printing, prints single space: &#39; &#39;)</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs29', 62)" onmouseover="showTip(event, 'fs29', 62)" class="f">btitle</span> <span class="o">=</span> <span class="o">~~~</span>(<span onmouseout="hideTip(event, 'fs30', 63)" onmouseover="showTip(event, 'fs30', 63)" class="i">bdu</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs7', 64)" onmouseover="showTip(event, 'fs7', 64)" class="t">Title</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span class="o">~~</span>(<span onmouseout="hideTip(event, 'fs4', 65)" onmouseover="showTip(event, 'fs4', 65)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;.&quot;</span>) <span class="o">%</span><span class="k">true</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs27', 66)" onmouseover="showTip(event, 'fs27', 66)" class="f">bspace</span>)
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs31', 67)" onmouseover="showTip(event, 'fs31', 67)" class="f">bname</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs29', 68)" onmouseover="showTip(event, 'fs29', 68)" class="f">btitle</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs32', 69)" onmouseover="showTip(event, 'fs32', 69)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs27', 70)" onmouseover="showTip(event, 'fs27', 70)" class="f">bspace</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs32', 71)" onmouseover="showTip(event, 'fs32', 71)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> ((<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs33', 72)" onmouseover="showTip(event, 'fs33', 72)" class="i">t</span>, <span onmouseout="hideTip(event, 'fs34', 73)" onmouseover="showTip(event, 'fs34', 73)" class="i">f</span>, <span onmouseout="hideTip(event, 'fs35', 74)" onmouseover="showTip(event, 'fs35', 74)" class="i">l</span>) <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs7', 75)" onmouseover="showTip(event, 'fs7', 75)" class="i">Title</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs33', 76)" onmouseover="showTip(event, 'fs33', 76)" class="i">t</span>; <span class="i">First</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs34', 77)" onmouseover="showTip(event, 'fs34', 77)" class="i">f</span>; <span class="i">Last</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs35', 78)" onmouseover="showTip(event, 'fs35', 78)" class="i">l</span> }), (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs36', 79)" onmouseover="showTip(event, 'fs36', 79)" class="i">n</span> <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs36', 80)" onmouseover="showTip(event, 'fs36', 80)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs37', 81)" onmouseover="showTip(event, 'fs37', 81)" class="i">Title</span>, <span onmouseout="hideTip(event, 'fs36', 82)" onmouseover="showTip(event, 'fs36', 82)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs14', 83)" onmouseover="showTip(event, 'fs14', 83)" class="i">First</span>, <span onmouseout="hideTip(event, 'fs36', 84)" onmouseover="showTip(event, 'fs36', 84)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs16', 85)" onmouseover="showTip(event, 'fs16', 85)" class="i">Last</span>)))
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs35', 76)" onmouseover="showTip(event, 'fs35', 76)" class="f">bname</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs33', 77)" onmouseover="showTip(event, 'fs33', 77)" class="f">btitle</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 78)" onmouseover="showTip(event, 'fs36', 78)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 79)" onmouseover="showTip(event, 'fs32', 79)" class="f">bspace</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 80)" onmouseover="showTip(event, 'fs36', 80)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> ((<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs37', 81)" onmouseover="showTip(event, 'fs37', 81)" class="i">t</span>, <span onmouseout="hideTip(event, 'fs38', 82)" onmouseover="showTip(event, 'fs38', 82)" class="i">f</span>, <span onmouseout="hideTip(event, 'fs39', 83)" onmouseover="showTip(event, 'fs39', 83)" class="i">l</span>) <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs8', 84)" onmouseover="showTip(event, 'fs8', 84)" class="i">Title</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 85)" onmouseover="showTip(event, 'fs37', 85)" class="i">t</span>; <span class="i">First</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 86)" onmouseover="showTip(event, 'fs38', 86)" class="i">f</span>; <span class="i">Last</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 87)" onmouseover="showTip(event, 'fs39', 87)" class="i">l</span> }), (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs40', 88)" onmouseover="showTip(event, 'fs40', 88)" class="i">n</span> <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs40', 89)" onmouseover="showTip(event, 'fs40', 89)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs41', 90)" onmouseover="showTip(event, 'fs41', 90)" class="i">Title</span>, <span onmouseout="hideTip(event, 'fs40', 91)" onmouseover="showTip(event, 'fs40', 91)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs15', 92)" onmouseover="showTip(event, 'fs15', 92)" class="i">First</span>, <span onmouseout="hideTip(event, 'fs40', 93)" onmouseover="showTip(event, 'fs40', 93)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs17', 94)" onmouseover="showTip(event, 'fs17', 94)" class="i">Last</span>)))
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs38', 86)" onmouseover="showTip(event, 'fs38', 86)" class="f">parseName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 87)" onmouseover="showTip(event, 'fs20', 87)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs21', 88)" onmouseover="showTip(event, 'fs21', 88)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs31', 89)" onmouseover="showTip(event, 'fs31', 89)" class="f">bname</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs39', 90)" onmouseover="showTip(event, 'fs39', 90)" class="f">printName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 91)" onmouseover="showTip(event, 'fs23', 91)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs31', 92)" onmouseover="showTip(event, 'fs31', 92)" class="f">bname</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs42', 95)" onmouseover="showTip(event, 'fs42', 95)" class="f">parseName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 96)" onmouseover="showTip(event, 'fs25', 96)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs26', 97)" onmouseover="showTip(event, 'fs26', 97)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs35', 98)" onmouseover="showTip(event, 'fs35', 98)" class="f">bname</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs43', 99)" onmouseover="showTip(event, 'fs43', 99)" class="f">printName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs28', 100)" onmouseover="showTip(event, 'fs28', 100)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs35', 101)" onmouseover="showTip(event, 'fs35', 101)" class="f">bname</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs40', 93)" onmouseover="showTip(event, 'fs40', 93)" class="i">einstein</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 94)" onmouseover="showTip(event, 'fs38', 94)" class="f">parseName</span> <span class="s">&quot;Dr. Albert Einstein&quot;</span>
-<span onmouseout="hideTip(event, 'fs39', 95)" onmouseover="showTip(event, 'fs39', 95)" class="f">printName</span> <span onmouseout="hideTip(event, 'fs40', 96)" onmouseover="showTip(event, 'fs40', 96)" class="i">einstein</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs44', 102)" onmouseover="showTip(event, 'fs44', 102)" class="i">einstein</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs42', 103)" onmouseover="showTip(event, 'fs42', 103)" class="f">parseName</span> <span class="s">&quot;Dr. Albert Einstein&quot;</span>
+<span onmouseout="hideTip(event, 'fs43', 104)" onmouseover="showTip(event, 'fs43', 104)" class="f">printName</span> <span onmouseout="hideTip(event, 'fs44', 105)" onmouseover="showTip(event, 'fs44', 105)" class="i">einstein</span>
 </code></pre></td>
 </tr>
 </table>
 
-<p>Breaking it down, the <code>.&gt;&gt;</code> operator sequentially applies the left and then the right boomerang,
-propagating the channel from the left. When we say "propagating," we mean exposing that channel
-in the resulting function. As a rule of thumb, operators with dots (.) expose the channel(s)
-from the boomerang(s) that are adjacent to the dot(s). For instance, the <code>.&gt;&gt;.</code> operator exposes
-the channels from both boomerangs as a tuple. The <code>.&gt;&gt;%</code> maps the channel from the left
-boomerang using an <code>Iso</code>. See <code>ChannelsAndIsos.fsx</code> for more about that.</p>
+<p>We've already seen the <code>.&gt;&gt;</code> operator, which sequentially applies the left and then the right boomerang,
+propagating the channel from the left. When we say "propagating," we mean exposing that channel in the
+resulting function. As a rule of thumb, operators with dots (.) expose the channel(s) from the boomerang(s)
+that are adjacent to the dot(s). For instance, the <code>.&gt;&gt;.</code> operator exposes the channels from both boomerangs
+as a tuple. The <code>.&gt;&gt;%</code> maps the channel from the left boomerang using an <code>Iso</code>, which is how the type of
+<code>bname</code> is <code>Boomerang&lt;Name&gt;</code>. See <code>ChannelsAndIsos.fsx</code> for more information about that.</p>
 
-<p>Next, the <code>~~</code> operator is the optional operator. The boomerang to which it is applied becomes
-optional to parse, and the exposed boolean channel determines whether that boomerang is printed.
-Finally, <code>~~~</code> is the channel-propagating optional operator, which turns a <code>Boomerang&lt;'a&gt;</code> into
-<code>Boomerang&lt;'a option&gt;</code>.</p>
+<p>To be continued.</p>
 
           <div class="tip" id="fs1">namespace SharpBoomerang</div>
 <div class="tip" id="fs2">module Combinators<br /><br />from SharpBoomerang</div>
 <div class="tip" id="fs3">val bhello : (Context -&gt; Context)<br /><br />Full name: Introduction.bhello</div>
 <div class="tip" id="fs4">val blit : str:channel&lt;string&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: SharpBoomerang.Combinators.blit<br /><em><br /><br />&#160;Boomerangs a literal string</em></div>
-<div class="tip" id="fs5">val parseFromStr : str:string -&gt; b:Boomerang -&gt; unit<br /><br />Full name: SharpBoomerang.Combinators.parseFromStr</div>
-<div class="tip" id="fs6">val printToStr : b:Boomerang -&gt; string<br /><br />Full name: SharpBoomerang.Combinators.printToStr</div>
-<div class="tip" id="fs7">type Title =<br />&#160;&#160;| Mr<br />&#160;&#160;| Ms<br />&#160;&#160;| Dr<br /><br />Full name: Introduction.Title</div>
-<div class="tip" id="fs8">union case Title.Mr: Title</div>
-<div class="tip" id="fs9">union case Title.Ms: Title</div>
-<div class="tip" id="fs10">union case Title.Dr: Title</div>
-<div class="tip" id="fs11">type Name =<br />&#160;&#160;{Title: Title option;<br />&#160;&#160;&#160;First: string;<br />&#160;&#160;&#160;Last: string;}<br /><br />Full name: Introduction.Name</div>
-<div class="tip" id="fs12">Multiple items<br />Name.Title: Title option<br /><br />--------------------<br />type Title =<br />&#160;&#160;| Mr<br />&#160;&#160;| Ms<br />&#160;&#160;| Dr<br /><br />Full name: Introduction.Title</div>
-<div class="tip" id="fs13">type &#39;T option = Option&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Core.option&lt;_&gt;</div>
-<div class="tip" id="fs14">Name.First: string</div>
-<div class="tip" id="fs15">Multiple items<br />val string : value:&#39;T -&gt; string<br /><br />Full name: Microsoft.FSharp.Core.Operators.string<br /><br />--------------------<br />type string = System.String<br /><br />Full name: Microsoft.FSharp.Core.string</div>
-<div class="tip" id="fs16">Name.Last: string</div>
-<div class="tip" id="fs17">val btitle1 : (Context -&gt; Context)<br /><br />Full name: Introduction.btitle1</div>
-<div class="tip" id="fs18">val btitle2 : (channel&lt;string&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle2</div>
-<div class="tip" id="fs19">val parseTitle2 : (string -&gt; string)<br /><br />Full name: Introduction.parseTitle2</div>
-<div class="tip" id="fs20">Multiple items<br />type StringInputChannel =<br />&#160;&#160;interface ICharChannel<br />&#160;&#160;new : str:string -&gt; StringInputChannel<br /><br />Full name: SharpBoomerang.StringInputChannel<br /><br />--------------------<br />new : str:string -&gt; StringInputChannel</div>
-<div class="tip" id="fs21">val parser : b:Boomerang&lt;&#39;a&gt; -&gt; inputCh:ICharChannel -&gt; &#39;a<br /><br />Full name: SharpBoomerang.Combinators.parser</div>
-<div class="tip" id="fs22">val printTitle2 : (string -&gt; string)<br /><br />Full name: Introduction.printTitle2</div>
-<div class="tip" id="fs23">val stringPrinter : b:Boomerang&lt;&#39;a&gt; -&gt; value:&#39;a -&gt; string<br /><br />Full name: SharpBoomerang.Combinators.stringPrinter</div>
-<div class="tip" id="fs24">val btitle3 : (channel&lt;Title&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle3</div>
-<div class="tip" id="fs25">val parseTitle3 : (string -&gt; Title)<br /><br />Full name: Introduction.parseTitle3</div>
-<div class="tip" id="fs26">val printTitle3 : (Title -&gt; string)<br /><br />Full name: Introduction.printTitle3</div>
-<div class="tip" id="fs27">val bspace : (Context -&gt; Context)<br /><br />Full name: Introduction.bspace</div>
-<div class="tip" id="fs28">val bws : ws:channel&lt;char&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: SharpBoomerang.Combinators.bws<br /><em><br /><br />&#160;Boomerangs a whitespace character</em></div>
-<div class="tip" id="fs29">val btitle : (channel&lt;Title option&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle</div>
-<div class="tip" id="fs30">val bdu&lt;&#39;a&gt; : Boomerang&lt;&#39;a&gt;<br /><br />Full name: SharpBoomerang.Combinators.bdu<br /><em><br /><br />&#160;Boomerangs a discriminated union case that takes no arguments</em></div>
-<div class="tip" id="fs31">val bname : (channel&lt;Name&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.bname</div>
-<div class="tip" id="fs32">val bstr : Boomerang&lt;string&gt;<br /><br />Full name: SharpBoomerang.Combinators.bstr<br /><em><br /><br />&#160;Boomerangs an arbitrary length string (non-greedy sequence of characters)</em></div>
-<div class="tip" id="fs33">val t : Title option</div>
-<div class="tip" id="fs34">val f : string</div>
-<div class="tip" id="fs35">val l : string</div>
-<div class="tip" id="fs36">val n : Name</div>
-<div class="tip" id="fs37">Name.Title: Title option</div>
-<div class="tip" id="fs38">val parseName : (string -&gt; Name)<br /><br />Full name: Introduction.parseName</div>
-<div class="tip" id="fs39">val printName : (Name -&gt; string)<br /><br />Full name: Introduction.printName</div>
-<div class="tip" id="fs40">val einstein : Name<br /><br />Full name: Introduction.einstein</div>
+<div class="tip" id="fs5">val bws : ws:channel&lt;char&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: SharpBoomerang.Combinators.bws<br /><em><br /><br />&#160;Boomerangs a single whitespace character</em></div>
+<div class="tip" id="fs6">val parseFromStr : str:string -&gt; b:Boomerang -&gt; unit<br /><br />Full name: SharpBoomerang.Combinators.parseFromStr</div>
+<div class="tip" id="fs7">val printToStr : b:Boomerang -&gt; string<br /><br />Full name: SharpBoomerang.Combinators.printToStr</div>
+<div class="tip" id="fs8">type Title =<br />&#160;&#160;| Mr<br />&#160;&#160;| Ms<br />&#160;&#160;| Dr<br /><br />Full name: Introduction.Title</div>
+<div class="tip" id="fs9">union case Title.Mr: Title</div>
+<div class="tip" id="fs10">union case Title.Ms: Title</div>
+<div class="tip" id="fs11">union case Title.Dr: Title</div>
+<div class="tip" id="fs12">type Name =<br />&#160;&#160;{Title: Title option;<br />&#160;&#160;&#160;First: string;<br />&#160;&#160;&#160;Last: string;}<br /><br />Full name: Introduction.Name</div>
+<div class="tip" id="fs13">Multiple items<br />Name.Title: Title option<br /><br />--------------------<br />type Title =<br />&#160;&#160;| Mr<br />&#160;&#160;| Ms<br />&#160;&#160;| Dr<br /><br />Full name: Introduction.Title</div>
+<div class="tip" id="fs14">type &#39;T option = Option&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Core.option&lt;_&gt;</div>
+<div class="tip" id="fs15">Name.First: string</div>
+<div class="tip" id="fs16">Multiple items<br />val string : value:&#39;T -&gt; string<br /><br />Full name: Microsoft.FSharp.Core.Operators.string<br /><br />--------------------<br />type string = System.String<br /><br />Full name: Microsoft.FSharp.Core.string</div>
+<div class="tip" id="fs17">Name.Last: string</div>
+<div class="tip" id="fs18">val btitle1 : (Context -&gt; Context)<br /><br />Full name: Introduction.btitle1</div>
+<div class="tip" id="fs19">Multiple items<br />type Boomerang = Context -&gt; Context<br /><br />Full name: Introduction.Boomerang<br /><br />--------------------<br />type Boomerang&lt;&#39;t&gt; = channel&lt;&#39;t&gt; -&gt; Boomerang<br /><br />Full name: SharpBoomerang.Boomerang&lt;_&gt;</div>
+<div class="tip" id="fs20">Multiple items<br />type Context =<br />&#160;&#160;interface IDisposable<br />&#160;&#160;new : contextType:ContextType * channel:ICharChannel -&gt; Context<br />&#160;&#160;abstract member Connect : IChannel&lt;&#39;t&gt; * IChannel&lt;&#39;t&gt; -&gt; Context<br />&#160;&#160;abstract member Dispose : unit -&gt; unit<br />&#160;&#160;abstract member Expect : (unit -&gt; bool) * string -&gt; unit<br />&#160;&#160;override Connect : l:IChannel&lt;&#39;a0&gt; * r:IChannel&lt;&#39;a0&gt; -&gt; Context<br />&#160;&#160;override Dispose : unit -&gt; unit<br />&#160;&#160;override Expect : bln:(unit -&gt; bool) * what:string -&gt; unit<br />&#160;&#160;member Channel : ICharChannel<br />&#160;&#160;member Type : ContextType<br /><br />Full name: SharpBoomerang.Context<br /><br />--------------------<br />new : contextType:ContextType * channel:ICharChannel -&gt; Context</div>
+<div class="tip" id="fs21">Multiple items<br />type Boomerang = Context -&gt; Context<br /><br />Full name: Introduction.Boomerang<br /><br />--------------------<br />type Boomerang&lt;&#39;t&gt; = channel&lt;&#39;t&gt; -&gt; Boomerang<br /><br />Full name: Introduction.Boomerang&lt;_&gt;</div>
+<div class="tip" id="fs22">type channel&lt;&#39;t&gt; = IChannel&lt;&#39;t&gt;<br /><br />Full name: SharpBoomerang.channel&lt;_&gt;</div>
+<div class="tip" id="fs23">val btitle2 : (channel&lt;string&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle2</div>
+<div class="tip" id="fs24">val parseTitle2 : (string -&gt; string)<br /><br />Full name: Introduction.parseTitle2</div>
+<div class="tip" id="fs25">Multiple items<br />type StringInputChannel =<br />&#160;&#160;interface ICharChannel<br />&#160;&#160;new : str:string -&gt; StringInputChannel<br />&#160;&#160;member Mark : unit -&gt; IMark<br />&#160;&#160;member Read : ret:(char -&gt; &#39;a0) -&gt; &#39;a0<br />&#160;&#160;member EndOfStream : bool<br />&#160;&#160;member Position : Position<br /><br />Full name: SharpBoomerang.StringInputChannel<br /><br />--------------------<br />new : str:string -&gt; StringInputChannel</div>
+<div class="tip" id="fs26">val parser : b:Boomerang&lt;&#39;a&gt; -&gt; inputCh:ICharChannel -&gt; &#39;a<br /><br />Full name: SharpBoomerang.Combinators.parser</div>
+<div class="tip" id="fs27">val printTitle2 : (string -&gt; string)<br /><br />Full name: Introduction.printTitle2</div>
+<div class="tip" id="fs28">val stringPrinter : b:Boomerang&lt;&#39;a&gt; -&gt; value:&#39;a -&gt; string<br /><br />Full name: SharpBoomerang.Combinators.stringPrinter</div>
+<div class="tip" id="fs29">val btitle3 : (channel&lt;Title&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle3</div>
+<div class="tip" id="fs30">val parseTitle3 : (string -&gt; Title)<br /><br />Full name: Introduction.parseTitle3</div>
+<div class="tip" id="fs31">val printTitle3 : (Title -&gt; string)<br /><br />Full name: Introduction.printTitle3</div>
+<div class="tip" id="fs32">val bspace : (Context -&gt; Context)<br /><br />Full name: Introduction.bspace</div>
+<div class="tip" id="fs33">val btitle : (channel&lt;Title option&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.btitle</div>
+<div class="tip" id="fs34">val bdu&lt;&#39;a&gt; : Boomerang&lt;&#39;a&gt;<br /><br />Full name: SharpBoomerang.Combinators.bdu<br /><em><br /><br />&#160;Boomerangs a discriminated union case that takes no arguments</em></div>
+<div class="tip" id="fs35">val bname : (channel&lt;Name&gt; -&gt; Context -&gt; Context)<br /><br />Full name: Introduction.bname</div>
+<div class="tip" id="fs36">val bstr : Boomerang&lt;string&gt;<br /><br />Full name: SharpBoomerang.Combinators.bstr<br /><em><br /><br />&#160;Boomerangs an arbitrary length string (non-greedy sequence of characters)</em></div>
+<div class="tip" id="fs37">val t : Title option</div>
+<div class="tip" id="fs38">val f : string</div>
+<div class="tip" id="fs39">val l : string</div>
+<div class="tip" id="fs40">val n : Name</div>
+<div class="tip" id="fs41">Name.Title: Title option</div>
+<div class="tip" id="fs42">val parseName : (string -&gt; Name)<br /><br />Full name: Introduction.parseName</div>
+<div class="tip" id="fs43">val printName : (Name -&gt; string)<br /><br />Full name: Introduction.printName</div>
+<div class="tip" id="fs44">val einstein : Name<br /><br />Full name: Introduction.einstein</div>
           
         </div>
         <div class="span3">

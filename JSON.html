@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <!-- 
+      The Parsing JSON
+ parameters will be replaced with the 
+      document title extracted from the <h1> element or
+      file name, if there is no <h1> heading
+    -->
+    <title>Parsing JSON
+</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SharpBoomerang documentation">
+    <meta name="author" content="Alex Corrado">
+    <script src="http://code.jquery.com/jquery-1.8.0.js"></script>
+    <script src="http://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="content/style.css" />
+    <script src="content/tips.js" type="text/javascript"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <!--
+          <li><a href="http://fsharp.org">fsharp.org</a></li>
+          <li><a href="https://github.com/chkn/SharpBoomerang">github page</a></li>
+        -->
+        </ul>
+        <h3 class="muted">SharpBoomerang</h3>
+      </div>
+      <hr />
+      <div class="row">
+        <div class="span9" id="main">
+          <h1>Parsing JSON</h1>
+
+<p>FParsec has JSON parsing as one of its <a href="http://www.quanttec.com/fparsec/tutorial.html#parsing-json">tutorials</a>. I adapted the code from
+the tutorial and ported it to SharpBoomerang. This document will be fleshed out
+with more discussion in the future.</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
+<span class="l"> 2: </span>
+<span class="l"> 3: </span>
+<span class="l"> 4: </span>
+<span class="l"> 5: </span>
+<span class="l"> 6: </span>
+<span class="l"> 7: </span>
+<span class="l"> 8: </span>
+<span class="l"> 9: </span>
+<span class="l">10: </span>
+<span class="l">11: </span>
+<span class="l">12: </span>
+<span class="l">13: </span>
+<span class="l">14: </span>
+<span class="l">15: </span>
+<span class="l">16: </span>
+<span class="l">17: </span>
+<span class="l">18: </span>
+<span class="l">19: </span>
+<span class="l">20: </span>
+<span class="l">21: </span>
+<span class="l">22: </span>
+<span class="l">23: </span>
+<span class="l">24: </span>
+<span class="l">25: </span>
+<span class="l">26: </span>
+<span class="l">27: </span>
+<span class="l">28: </span>
+<span class="l">29: </span>
+<span class="l">30: </span>
+<span class="l">31: </span>
+<span class="l">32: </span>
+<span class="l">33: </span>
+<span class="l">34: </span>
+<span class="l">35: </span>
+<span class="l">36: </span>
+<span class="l">37: </span>
+<span class="l">38: </span>
+<span class="l">39: </span>
+<span class="l">40: </span>
+<span class="l">41: </span>
+<span class="l">42: </span>
+<span class="l">43: </span>
+<span class="l">44: </span>
+<span class="l">45: </span>
+<span class="l">46: </span>
+<span class="l">47: </span>
+<span class="l">48: </span>
+<span class="l">49: </span>
+<span class="l">50: </span>
+<span class="l">51: </span>
+<span class="l">52: </span>
+<span class="l">53: </span>
+<span class="l">54: </span>
+<span class="l">55: </span>
+<span class="l">56: </span>
+<span class="l">57: </span>
+<span class="l">58: </span>
+<span class="l">59: </span>
+<span class="l">60: </span>
+<span class="l">61: </span>
+<span class="l">62: </span>
+<span class="l">63: </span>
+<span class="l">64: </span>
+<span class="l">65: </span>
+<span class="l">66: </span>
+<span class="l">67: </span>
+<span class="l">68: </span>
+<span class="l">69: </span>
+<span class="l">70: </span>
+<span class="l">71: </span>
+<span class="l">72: </span>
+<span class="l">73: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="t">Json</span> <span class="o">=</span>
+    | <span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="p">JNull</span>
+    | <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="p">JBool</span>   <span class="k">of</span> <span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="t">bool</span>
+    | <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="p">JString</span> <span class="k">of</span> <span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="t">string</span>
+    | <span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="p">JNumber</span> <span class="k">of</span> <span onmouseout="hideTip(event, 'fs11', 12)" onmouseover="showTip(event, 'fs11', 12)" class="t">float</span>
+
+    | <span onmouseout="hideTip(event, 'fs12', 13)" onmouseover="showTip(event, 'fs12', 13)" class="p">JList</span>   <span class="k">of</span> <span onmouseout="hideTip(event, 'fs4', 14)" onmouseover="showTip(event, 'fs4', 14)" class="t">Json</span> <span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="t">seq</span>
+    | <span onmouseout="hideTip(event, 'fs14', 16)" onmouseover="showTip(event, 'fs14', 16)" class="p">JObject</span> <span class="k">of</span> <span onmouseout="hideTip(event, 'fs15', 17)" onmouseover="showTip(event, 'fs15', 17)" class="t">Map</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs9', 18)" onmouseover="showTip(event, 'fs9', 18)" class="t">string</span>, <span onmouseout="hideTip(event, 'fs4', 19)" onmouseover="showTip(event, 'fs4', 19)" class="t">Json</span><span class="o">&gt;</span>
+
+<span class="c">/// Boomerangs a JNull</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="f">bjnull</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;null&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs5', 22)" onmouseover="showTip(event, 'fs5', 22)" class="p">JNull</span>
+
+<span class="c">/// Boomerangs a JBool</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs18', 23)" onmouseover="showTip(event, 'fs18', 23)" class="f">bjbool</span> <span class="o">=</span> (<span onmouseout="hideTip(event, 'fs17', 24)" onmouseover="showTip(event, 'fs17', 24)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;true&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs6', 25)" onmouseover="showTip(event, 'fs6', 25)" class="p">JBool</span> <span class="k">true</span>) <span class="o">&lt;.&gt;</span>
+             (<span onmouseout="hideTip(event, 'fs17', 26)" onmouseover="showTip(event, 'fs17', 26)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;false&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span onmouseout="hideTip(event, 'fs6', 27)" onmouseover="showTip(event, 'fs6', 27)" class="p">JBool</span> <span class="k">false</span>)
+
+<span class="c">/// Boomerangs a (possibly escaped) character. Doesn&#39;t handle Unicode escapes.</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs19', 28)" onmouseover="showTip(event, 'fs19', 28)" class="f">bjchr</span> <span class="o">=</span>
+    <span class="c">// Define a boomerang to parse any character that isn&#39;t a backslash</span>
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs20', 29)" onmouseover="showTip(event, 'fs20', 29)" class="f">bchrnoslash</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs21', 30)" onmouseover="showTip(event, 'fs21', 30)" class="t">Channel</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs22', 31)" onmouseover="showTip(event, 'fs22', 31)" class="f">expectFn</span> <span class="s">&quot;no slash&quot;</span> (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs23', 32)" onmouseover="showTip(event, 'fs23', 32)" class="i">c</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs23', 33)" onmouseover="showTip(event, 'fs23', 33)" class="i">c</span> <span class="o">&lt;&gt;</span> <span class="s">&#39;\\&#39;</span>) <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs24', 34)" onmouseover="showTip(event, 'fs24', 34)" class="f">bchr</span>
+
+    <span class="c">// Boomerang a possibly-escaped character with the first-successful parse operator, &lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 35)" onmouseover="showTip(event, 'fs17', 35)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">b&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;\b&#39;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 36)" onmouseover="showTip(event, 'fs17', 36)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">f&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;\f&#39;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 37)" onmouseover="showTip(event, 'fs17', 37)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">n&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;\n&#39;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 38)" onmouseover="showTip(event, 'fs17', 38)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">r&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;\r&#39;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 39)" onmouseover="showTip(event, 'fs17', 39)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">t&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;\t&#39;</span>) <span class="o">&lt;.&gt;</span>
+    (<span onmouseout="hideTip(event, 'fs17', 40)" onmouseover="showTip(event, 'fs17', 40)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s"></span><span class="e">\&quot;</span><span class="s">&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">%</span> <span class="s">&#39;&quot;&#39;</span>) <span class="o">&lt;.&gt;</span>
+    <span class="c">// Any character that isn&#39;t a slash simply yields itself</span>
+    <span onmouseout="hideTip(event, 'fs20', 41)" onmouseover="showTip(event, 'fs20', 41)" class="f">bchrnoslash</span>            <span class="o">&lt;.&gt;</span>
+    <span class="c">// Any other character prefixed by a slash simply yields that character</span>
+    <span class="c">//  This rule must come after the previous one to prevent a slash from always being printed.</span>
+    (<span onmouseout="hideTip(event, 'fs17', 42)" onmouseover="showTip(event, 'fs17', 42)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\\</span><span class="s">&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">.</span> <span onmouseout="hideTip(event, 'fs24', 43)" onmouseover="showTip(event, 'fs24', 43)" class="f">bchr</span>)
+
+<span class="c">/// Boomerangs a JString</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs25', 44)" onmouseover="showTip(event, 'fs25', 44)" class="f">bjstr</span> <span class="o">=</span>
+    <span class="c">// Define an Iso for converting a character sequence to a string</span>
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs26', 45)" onmouseover="showTip(event, 'fs26', 45)" class="i">charsToStr</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs27', 46)" onmouseover="showTip(event, 'fs27', 46)" class="t">Iso</span><span class="o">&lt;</span>_,_<span class="o">&gt;</span> <span class="o">=</span> ((<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs28', 47)" onmouseover="showTip(event, 'fs28', 47)" class="i">chrs</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs29', 48)" onmouseover="showTip(event, 'fs29', 48)" class="t">String</span>(<span onmouseout="hideTip(event, 'fs30', 49)" onmouseover="showTip(event, 'fs30', 49)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs31', 50)" onmouseover="showTip(event, 'fs31', 50)" class="f">toArray</span> <span onmouseout="hideTip(event, 'fs28', 51)" onmouseover="showTip(event, 'fs28', 51)" class="i">chrs</span>)),
+                                 (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs32', 52)" onmouseover="showTip(event, 'fs32', 52)" class="i">str</span>  <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs32', 53)" onmouseover="showTip(event, 'fs32', 53)" class="i">str</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs33', 54)" onmouseover="showTip(event, 'fs33', 54)" class="f">ToCharArray</span>() <span class="o">:&gt;</span> <span onmouseout="hideTip(event, 'fs34', 55)" onmouseover="showTip(event, 'fs34', 55)" class="t">char</span> <span onmouseout="hideTip(event, 'fs13', 56)" onmouseover="showTip(event, 'fs13', 56)" class="t">seq</span>))
+    <span class="c">// Boomerang a quoted JSON string</span>
+    <span onmouseout="hideTip(event, 'fs17', 57)" onmouseover="showTip(event, 'fs17', 57)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\&quot;</span><span class="s">&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">.</span> (<span class="o">+.</span><span onmouseout="hideTip(event, 'fs19', 58)" onmouseover="showTip(event, 'fs19', 58)" class="f">bjchr</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> <span onmouseout="hideTip(event, 'fs26', 59)" onmouseover="showTip(event, 'fs26', 59)" class="i">charsToStr</span>) <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs17', 60)" onmouseover="showTip(event, 'fs17', 60)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;</span><span class="e">\&quot;</span><span class="s">&quot;</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> <span onmouseout="hideTip(event, 'fs27', 61)" onmouseover="showTip(event, 'fs27', 61)" class="t">Iso</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs35', 62)" onmouseover="showTip(event, 'fs35', 62)" class="f">ofFn</span>(<span class="k">fun</span> <span class="i">str</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs8', 63)" onmouseover="showTip(event, 'fs8', 63)" class="i">JString</span> <span class="i">str</span>)
+
+<span class="c">/// Boomerangs a JNumber. Doesn&#39;t handle exponent notation</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs36', 64)" onmouseover="showTip(event, 'fs36', 64)" class="f">bjnum</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 65)" onmouseover="showTip(event, 'fs37', 65)" class="i">bfloat</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> <span onmouseout="hideTip(event, 'fs27', 66)" onmouseover="showTip(event, 'fs27', 66)" class="t">Iso</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs35', 67)" onmouseover="showTip(event, 'fs35', 67)" class="f">ofFn</span>(<span class="k">fun</span> <span class="i">num</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs10', 68)" onmouseover="showTip(event, 'fs10', 68)" class="i">JNumber</span> <span class="i">num</span>)
+
+<span class="c">/// Boomerangs a JList</span>
+<span class="c">// Note that we need to make the arg explicit here to make f# happy :/</span>
+<span class="k">let</span> <span class="k">rec</span> <span onmouseout="hideTip(event, 'fs38', 69)" onmouseover="showTip(event, 'fs38', 69)" class="f">bjlist</span> <span onmouseout="hideTip(event, 'fs39', 70)" onmouseover="showTip(event, 'fs39', 70)" class="i">jlist</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs17', 71)" onmouseover="showTip(event, 'fs17', 71)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;[&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">.</span> <span onmouseout="hideTip(event, 'fs40', 72)" onmouseover="showTip(event, 'fs40', 72)" class="f">bslist</span> <span onmouseout="hideTip(event, 'fs41', 73)" onmouseover="showTip(event, 'fs41', 73)" class="i">bjson</span> (<span onmouseout="hideTip(event, 'fs17', 74)" onmouseover="showTip(event, 'fs17', 74)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;,&quot;</span>) <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs17', 75)" onmouseover="showTip(event, 'fs17', 75)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;]&quot;</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> <span onmouseout="hideTip(event, 'fs27', 76)" onmouseover="showTip(event, 'fs27', 76)" class="t">Iso</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs35', 77)" onmouseover="showTip(event, 'fs35', 77)" class="f">ofFn</span>(<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs13', 78)" onmouseover="showTip(event, 'fs13', 78)" class="i">seq</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs12', 79)" onmouseover="showTip(event, 'fs12', 79)" class="i">JList</span> <span onmouseout="hideTip(event, 'fs13', 80)" onmouseover="showTip(event, 'fs13', 80)" class="i">seq</span>) <span class="o">&lt;|</span> <span onmouseout="hideTip(event, 'fs39', 81)" onmouseover="showTip(event, 'fs39', 81)" class="i">jlist</span>
+
+<span class="c">/// Boomerangs a JObject</span>
+<span class="c">// Again note that we need to make the arg explicit here to make f# happy :/</span>
+<span class="k">and</span> <span onmouseout="hideTip(event, 'fs42', 82)" onmouseover="showTip(event, 'fs42', 82)" class="f">bjobj</span> <span onmouseout="hideTip(event, 'fs43', 83)" onmouseover="showTip(event, 'fs43', 83)" class="i">jobj</span> <span class="o">=</span>
+    <span class="c">// Boomerang a key-value pair</span>
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs44', 84)" onmouseover="showTip(event, 'fs44', 84)" class="f">bkv</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 85)" onmouseover="showTip(event, 'fs25', 85)" class="f">bjstr</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs45', 86)" onmouseover="showTip(event, 'fs45', 86)" class="i">bws0</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs17', 87)" onmouseover="showTip(event, 'fs17', 87)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;:&quot;</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs41', 88)" onmouseover="showTip(event, 'fs41', 88)" class="i">bjson</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> ((<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs8', 89)" onmouseover="showTip(event, 'fs8', 89)" class="p">JString</span> <span onmouseout="hideTip(event, 'fs46', 90)" onmouseover="showTip(event, 'fs46', 90)" class="i">k</span>, <span onmouseout="hideTip(event, 'fs47', 91)" onmouseover="showTip(event, 'fs47', 91)" class="i">v</span>) <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs46', 92)" onmouseover="showTip(event, 'fs46', 92)" class="i">k</span>, <span onmouseout="hideTip(event, 'fs47', 93)" onmouseover="showTip(event, 'fs47', 93)" class="i">v</span>)), (<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs46', 94)" onmouseover="showTip(event, 'fs46', 94)" class="i">k</span>, <span onmouseout="hideTip(event, 'fs47', 95)" onmouseover="showTip(event, 'fs47', 95)" class="i">v</span>) <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs8', 96)" onmouseover="showTip(event, 'fs8', 96)" class="p">JString</span> <span onmouseout="hideTip(event, 'fs46', 97)" onmouseover="showTip(event, 'fs46', 97)" class="i">k</span>, <span onmouseout="hideTip(event, 'fs47', 98)" onmouseover="showTip(event, 'fs47', 98)" class="i">v</span>)))
+
+    <span class="c">// Boomerang the object</span>
+    <span onmouseout="hideTip(event, 'fs17', 99)" onmouseover="showTip(event, 'fs17', 99)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;{&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs45', 100)" onmouseover="showTip(event, 'fs45', 100)" class="i">bws0</span> <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">.</span> <span onmouseout="hideTip(event, 'fs40', 101)" onmouseover="showTip(event, 'fs40', 101)" class="f">bslist</span> <span onmouseout="hideTip(event, 'fs44', 102)" onmouseover="showTip(event, 'fs44', 102)" class="f">bkv</span> (<span onmouseout="hideTip(event, 'fs45', 103)" onmouseover="showTip(event, 'fs45', 103)" class="i">bws0</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs17', 104)" onmouseover="showTip(event, 'fs17', 104)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;,&quot;</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs45', 105)" onmouseover="showTip(event, 'fs45', 105)" class="i">bws0</span>) <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs45', 106)" onmouseover="showTip(event, 'fs45', 106)" class="i">bws0</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs17', 107)" onmouseover="showTip(event, 'fs17', 107)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;}&quot;</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> <span onmouseout="hideTip(event, 'fs27', 108)" onmouseover="showTip(event, 'fs27', 108)" class="t">Iso</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs35', 109)" onmouseover="showTip(event, 'fs35', 109)" class="f">ofFn</span>(<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs13', 110)" onmouseover="showTip(event, 'fs13', 110)" class="i">seq</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs13', 111)" onmouseover="showTip(event, 'fs13', 111)" class="i">seq</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs15', 112)" onmouseover="showTip(event, 'fs15', 112)" class="i">Map</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs48', 113)" onmouseover="showTip(event, 'fs48', 113)" class="i">ofSeq</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs14', 114)" onmouseover="showTip(event, 'fs14', 114)" class="i">JObject</span>) <span class="o">&lt;|</span> <span onmouseout="hideTip(event, 'fs43', 115)" onmouseover="showTip(event, 'fs43', 115)" class="i">jobj</span>
+
+<span class="c">/// Boomerangs a Json</span>
+<span class="k">and</span> <span onmouseout="hideTip(event, 'fs41', 116)" onmouseover="showTip(event, 'fs41', 116)" class="i">bjson</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs45', 117)" onmouseover="showTip(event, 'fs45', 117)" class="i">bws0</span>    <span class="o">&gt;</span><span class="o">&gt;</span><span class="o">.</span> <span class="c">// optional whitespace</span>
+    (<span onmouseout="hideTip(event, 'fs16', 118)" onmouseover="showTip(event, 'fs16', 118)" class="f">bjnull</span> <span class="o">&lt;.&gt;</span>
+     <span onmouseout="hideTip(event, 'fs18', 119)" onmouseover="showTip(event, 'fs18', 119)" class="f">bjbool</span> <span class="o">&lt;.&gt;</span>
+     <span onmouseout="hideTip(event, 'fs25', 120)" onmouseover="showTip(event, 'fs25', 120)" class="f">bjstr</span>  <span class="o">&lt;.&gt;</span>
+     <span onmouseout="hideTip(event, 'fs36', 121)" onmouseover="showTip(event, 'fs36', 121)" class="f">bjnum</span>  <span class="o">&lt;.&gt;</span>
+     <span class="f">bjlist</span> <span class="o">&lt;.&gt;</span>
+     <span class="f">bjobj</span>) <span class="o">.</span><span class="o">&gt;&gt;</span>
+    <span onmouseout="hideTip(event, 'fs45', 122)" onmouseover="showTip(event, 'fs45', 122)" class="i">bws0</span> <span class="c">// optionally ending in whitespace</span>
+
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs49', 123)" onmouseover="showTip(event, 'fs49', 123)" class="f">parseJson</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs50', 124)" onmouseover="showTip(event, 'fs50', 124)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs51', 125)" onmouseover="showTip(event, 'fs51', 125)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs41', 126)" onmouseover="showTip(event, 'fs41', 126)" class="i">bjson</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs52', 127)" onmouseover="showTip(event, 'fs52', 127)" class="f">printJson</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs53', 128)" onmouseover="showTip(event, 'fs53', 128)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs41', 129)" onmouseover="showTip(event, 'fs41', 129)" class="i">bjson</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>Now we can parse/print some JSON:</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
+<span class="l"> 2: </span>
+<span class="l"> 3: </span>
+<span class="l"> 4: </span>
+<span class="l"> 5: </span>
+<span class="l"> 6: </span>
+<span class="l"> 7: </span>
+<span class="l"> 8: </span>
+<span class="l"> 9: </span>
+<span class="l">10: </span>
+<span class="l">11: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs54', 130)" onmouseover="showTip(event, 'fs54', 130)" class="i">json</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs49', 131)" onmouseover="showTip(event, 'fs49', 131)" class="f">parseJson</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">{</span>
+<span class="s">    &quot;str&quot;: &quot;value&quot;,</span>
+<span class="s">    &quot;num&quot;: 10.5,</span>
+<span class="s">    &quot;bln&quot;: true,</span>
+<span class="s">    &quot;nul&quot;: null,</span>
+<span class="s">    &quot;lst&quot;: [4, 5, &quot;a&quot;, &quot;b&quot;]</span>
+<span class="s">}</span>
+<span class="s">&quot;&quot;&quot;</span>
+
+<span onmouseout="hideTip(event, 'fs52', 132)" onmouseover="showTip(event, 'fs52', 132)" class="f">printJson</span> <span onmouseout="hideTip(event, 'fs54', 133)" onmouseover="showTip(event, 'fs54', 133)" class="i">json</span>
+</code></pre></td>
+</tr>
+</table>
+
+          <div class="tip" id="fs1">namespace System</div>
+<div class="tip" id="fs2">namespace SharpBoomerang</div>
+<div class="tip" id="fs3">module Combinators<br /><br />from SharpBoomerang</div>
+<div class="tip" id="fs4">type Json =<br />&#160;&#160;| JNull<br />&#160;&#160;| JBool of bool<br />&#160;&#160;| JString of string<br />&#160;&#160;| JNumber of float<br />&#160;&#160;| JList of seq&lt;Json&gt;<br />&#160;&#160;| JObject of Map&lt;string,Json&gt;<br /><br />Full name: JSON.Json</div>
+<div class="tip" id="fs5">union case Json.JNull: Json</div>
+<div class="tip" id="fs6">union case Json.JBool: bool -&gt; Json</div>
+<div class="tip" id="fs7">type bool = Boolean<br /><br />Full name: Microsoft.FSharp.Core.bool</div>
+<div class="tip" id="fs8">union case Json.JString: string -&gt; Json</div>
+<div class="tip" id="fs9">Multiple items<br />val string : value:&#39;T -&gt; string<br /><br />Full name: Microsoft.FSharp.Core.Operators.string<br /><br />--------------------<br />type string = String<br /><br />Full name: Microsoft.FSharp.Core.string</div>
+<div class="tip" id="fs10">union case Json.JNumber: float -&gt; Json</div>
+<div class="tip" id="fs11">Multiple items<br />val float : value:&#39;T -&gt; float (requires member op_Explicit)<br /><br />Full name: Microsoft.FSharp.Core.Operators.float<br /><br />--------------------<br />type float = Double<br /><br />Full name: Microsoft.FSharp.Core.float<br /><br />--------------------<br />type float&lt;&#39;Measure&gt; = float<br /><br />Full name: Microsoft.FSharp.Core.float&lt;_&gt;</div>
+<div class="tip" id="fs12">union case Json.JList: seq&lt;Json&gt; -&gt; Json</div>
+<div class="tip" id="fs13">Multiple items<br />val seq : sequence:seq&lt;&#39;T&gt; -&gt; seq&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Core.Operators.seq<br /><br />--------------------<br />type seq&lt;&#39;T&gt; = Collections.Generic.IEnumerable&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Collections.seq&lt;_&gt;</div>
+<div class="tip" id="fs14">union case Json.JObject: Map&lt;string,Json&gt; -&gt; Json</div>
+<div class="tip" id="fs15">Multiple items<br />module Map<br /><br />from Microsoft.FSharp.Collections<br /><br />--------------------<br />type Map&lt;&#39;Key,&#39;Value (requires comparison)&gt; =<br />&#160;&#160;interface IEnumerable<br />&#160;&#160;interface IComparable<br />&#160;&#160;interface IEnumerable&lt;KeyValuePair&lt;&#39;Key,&#39;Value&gt;&gt;<br />&#160;&#160;interface ICollection&lt;KeyValuePair&lt;&#39;Key,&#39;Value&gt;&gt;<br />&#160;&#160;interface IDictionary&lt;&#39;Key,&#39;Value&gt;<br />&#160;&#160;new : elements:seq&lt;&#39;Key * &#39;Value&gt; -&gt; Map&lt;&#39;Key,&#39;Value&gt;<br />&#160;&#160;member Add : key:&#39;Key * value:&#39;Value -&gt; Map&lt;&#39;Key,&#39;Value&gt;<br />&#160;&#160;member ContainsKey : key:&#39;Key -&gt; bool<br />&#160;&#160;override Equals : obj -&gt; bool<br />&#160;&#160;member Remove : key:&#39;Key -&gt; Map&lt;&#39;Key,&#39;Value&gt;<br />&#160;&#160;...<br /><br />Full name: Microsoft.FSharp.Collections.Map&lt;_,_&gt;<br /><br />--------------------<br />new : elements:seq&lt;&#39;Key * &#39;Value&gt; -&gt; Map&lt;&#39;Key,&#39;Value&gt;</div>
+<div class="tip" id="fs16">val bjnull : (channel&lt;Json&gt; -&gt; Context -&gt; Context)<br /><br />Full name: JSON.bjnull<br /><em><br /><br />&#160;Boomerangs a JNull</em></div>
+<div class="tip" id="fs17">val blit : str:channel&lt;string&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: SharpBoomerang.Combinators.blit<br /><em><br /><br />&#160;Boomerangs a literal string</em></div>
+<div class="tip" id="fs18">val bjbool : (channel&lt;Json&gt; -&gt; Context -&gt; Context)<br /><br />Full name: JSON.bjbool<br /><em><br /><br />&#160;Boomerangs a JBool</em></div>
+<div class="tip" id="fs19">val bjchr : (channel&lt;char&gt; -&gt; Context -&gt; Context)<br /><br />Full name: JSON.bjchr<br /><em><br /><br />&#160;Boomerangs a (possibly escaped) character. Doesn&#39;t handle Unicode escapes.</em></div>
+<div class="tip" id="fs20">val bchrnoslash : (channel&lt;char&gt; -&gt; Context -&gt; Context)</div>
+<div class="tip" id="fs21">module Channel<br /><br />from SharpBoomerang</div>
+<div class="tip" id="fs22">val expectFn : desc:string -&gt; check:(&#39;t -&gt; bool) -&gt; ch:IChannel&lt;&#39;t&gt; -&gt; IChannel&lt;&#39;t&gt;<br /><br />Full name: SharpBoomerang.Channel.expectFn<br /><em><br /><br />&#160;Returns a channel that expects a certain value to be read or written<br />&#160;&#160;to/from the given channel. If a different value is read or written,<br />&#160;&#160;throws an exception with the given description. The expected value is determined by a function.</em></div>
+<div class="tip" id="fs23">val c : char</div>
+<div class="tip" id="fs24">val bchr : chr:channel&lt;char&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: SharpBoomerang.Combinators.bchr<br /><em><br /><br />&#160;Boomerangs a single character</em></div>
+<div class="tip" id="fs25">val bjstr : (channel&lt;Json&gt; -&gt; Context -&gt; Context)<br /><br />Full name: JSON.bjstr<br /><em><br /><br />&#160;Boomerangs a JString</em></div>
+<div class="tip" id="fs26">val charsToStr : Iso&lt;seq&lt;char&gt;,String&gt;</div>
+<div class="tip" id="fs27">Multiple items<br />type Iso =<br />&#160;&#160;private new : unit -&gt; Iso<br />&#160;&#160;static member ofFn : expr:Expr&lt;(&#39;a -&gt; &#39;b)&gt; -&gt; Iso&lt;&#39;a2,&#39;a3&gt;<br />&#160;&#160;static member oneWay : fn:(&#39;a -&gt; &#39;b) -&gt; Iso&lt;&#39;a,&#39;b&gt;<br /><br />Full name: SharpBoomerang.Iso<br /><br />--------------------<br />type Iso&lt;&#39;a,&#39;b&gt; = (&#39;a -&gt; &#39;b) * (&#39;b -&gt; &#39;a)<br /><br />Full name: SharpBoomerang.Iso&lt;_,_&gt;<br /><em><br /><br />&#160;Total, one-to-one isomorphism of a &lt;&gt; b</em></div>
+<div class="tip" id="fs28">val chrs : seq&lt;char&gt;</div>
+<div class="tip" id="fs29">Multiple items<br />type String =<br />&#160;&#160;new : value:char -&gt; string + 7 overloads<br />&#160;&#160;member Chars : int -&gt; char<br />&#160;&#160;member Clone : unit -&gt; obj<br />&#160;&#160;member CompareTo : value:obj -&gt; int + 1 overload<br />&#160;&#160;member Contains : value:string -&gt; bool<br />&#160;&#160;member CopyTo : sourceIndex:int * destination:char[] * destinationIndex:int * count:int -&gt; unit<br />&#160;&#160;member EndsWith : value:string -&gt; bool + 2 overloads<br />&#160;&#160;member Equals : obj:obj -&gt; bool + 2 overloads<br />&#160;&#160;member GetEnumerator : unit -&gt; CharEnumerator<br />&#160;&#160;member GetHashCode : unit -&gt; int<br />&#160;&#160;...<br /><br />Full name: System.String<br /><br />--------------------<br />String(value: nativeptr&lt;char&gt;) : unit<br />String(value: nativeptr&lt;sbyte&gt;) : unit<br />String(value: char []) : unit<br />String(c: char, count: int) : unit<br />String(value: nativeptr&lt;char&gt;, startIndex: int, length: int) : unit<br />String(value: nativeptr&lt;sbyte&gt;, startIndex: int, length: int) : unit<br />String(value: char [], startIndex: int, length: int) : unit<br />String(value: nativeptr&lt;sbyte&gt;, startIndex: int, length: int, enc: Text.Encoding) : unit</div>
+<div class="tip" id="fs30">module Seq<br /><br />from Microsoft.FSharp.Collections</div>
+<div class="tip" id="fs31">val toArray : source:seq&lt;&#39;T&gt; -&gt; &#39;T []<br /><br />Full name: Microsoft.FSharp.Collections.Seq.toArray</div>
+<div class="tip" id="fs32">val str : String</div>
+<div class="tip" id="fs33">String.ToCharArray() : char []<br />String.ToCharArray(startIndex: int, length: int) : char []</div>
+<div class="tip" id="fs34">Multiple items<br />val char : value:&#39;T -&gt; char (requires member op_Explicit)<br /><br />Full name: Microsoft.FSharp.Core.Operators.char<br /><br />--------------------<br />type char = Char<br /><br />Full name: Microsoft.FSharp.Core.char</div>
+<div class="tip" id="fs35">static member Iso.ofFn : expr:Quotations.Expr&lt;(&#39;a -&gt; &#39;b)&gt; -&gt; Iso&lt;&#39;a2,&#39;a3&gt;<br /><em><br /><br />&#160;Given a simple function, `&#39;a -&gt; &#39;b`, attempts to derive the inverse implicitly</em></div>
+<div class="tip" id="fs36">val bjnum : (channel&lt;Json&gt; -&gt; Context -&gt; Context)<br /><br />Full name: JSON.bjnum<br /><em><br /><br />&#160;Boomerangs a JNumber. Doesn&#39;t handle exponent notation</em></div>
+<div class="tip" id="fs37">val bfloat : Boomerang&lt;float&gt;<br /><br />Full name: SharpBoomerang.Combinators.bfloat<br /><em><br /><br />&#160;Boomerangs a possibly-negative floating point number</em></div>
+<div class="tip" id="fs38">val bjlist : jlist:IChannel&lt;&#39;a&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: JSON.bjlist<br /><em><br /><br />&#160;Boomerangs a JList</em></div>
+<div class="tip" id="fs39">val jlist : IChannel&lt;&#39;a&gt;</div>
+<div class="tip" id="fs40">val bslist : l:Boomerang&lt;&#39;t&gt; -&gt; s:Boomerang -&gt; list:IChannel&lt;seq&lt;&#39;t&gt;&gt; -&gt; ctx:Context -&gt; Context<br /><br />Full name: SharpBoomerang.Combinators.bslist<br /><em><br /><br />&#160;Boomerangs the given boomerang repeatedly, separated by the given separator<br />&#160;&#160;Similar to the channel-propagating greedy one or more operator (!+.), but with the given separator</em></div>
+<div class="tip" id="fs41">val bjson : Boomerang&lt;Json&gt;<br /><br />Full name: JSON.bjson<br /><em><br /><br />&#160;Boomerangs a Json</em></div>
+<div class="tip" id="fs42">val bjobj : jobj:IChannel&lt;&#39;a&gt; -&gt; (Context -&gt; Context)<br /><br />Full name: JSON.bjobj<br /><em><br /><br />&#160;Boomerangs a JObject</em></div>
+<div class="tip" id="fs43">val jobj : IChannel&lt;&#39;a&gt;</div>
+<div class="tip" id="fs44">val bkv : (channel&lt;string * Json&gt; -&gt; Context -&gt; Context)</div>
+<div class="tip" id="fs45">val bws0 : Boomerang<br /><br />Full name: SharpBoomerang.Combinators.bws0<br /><em><br /><br />&#160;Boomerangs a greedy sequence of zero or more whitespace characters.<br />&#160;&#160;When printing, no whitespace is printed.</em></div>
+<div class="tip" id="fs46">val k : string</div>
+<div class="tip" id="fs47">val v : Json</div>
+<div class="tip" id="fs48">val ofSeq : elements:seq&lt;&#39;Key * &#39;T&gt; -&gt; Map&lt;&#39;Key,&#39;T&gt; (requires comparison)<br /><br />Full name: Microsoft.FSharp.Collections.Map.ofSeq</div>
+<div class="tip" id="fs49">val parseJson : (string -&gt; Json)<br /><br />Full name: JSON.parseJson</div>
+<div class="tip" id="fs50">Multiple items<br />type StringInputChannel =<br />&#160;&#160;interface ICharChannel<br />&#160;&#160;new : str:string -&gt; StringInputChannel<br />&#160;&#160;member Mark : unit -&gt; IMark<br />&#160;&#160;member Read : ret:(char -&gt; &#39;a0) -&gt; &#39;a0<br />&#160;&#160;member EndOfStream : bool<br />&#160;&#160;member Position : Position<br /><br />Full name: SharpBoomerang.StringInputChannel<br /><br />--------------------<br />new : str:string -&gt; StringInputChannel</div>
+<div class="tip" id="fs51">val parser : b:Boomerang&lt;&#39;a&gt; -&gt; inputCh:ICharChannel -&gt; &#39;a<br /><br />Full name: SharpBoomerang.Combinators.parser</div>
+<div class="tip" id="fs52">val printJson : (Json -&gt; string)<br /><br />Full name: JSON.printJson</div>
+<div class="tip" id="fs53">val stringPrinter : b:Boomerang&lt;&#39;a&gt; -&gt; value:&#39;a -&gt; string<br /><br />Full name: SharpBoomerang.Combinators.stringPrinter</div>
+<div class="tip" id="fs54">val json : Json<br /><br />Full name: JSON.json</div>
+          
+        </div>
+        <div class="span3">
+
+          <ul class="nav nav-list" id="menu">
+            <li class="nav-header">SharpBoomerang</li>
+            <li><a href="index.html">Home page</a></li>
+            <li class="divider"></li>
+            <li><a href="https://www.nuget.org/packages/SharpBoomerang">Get Library via NuGet</a></li>
+            <li><a href="https://github.com/chkn/SharpBoomerang">Source Code on GitHub</a></li>
+            <li class="divider"></li>
+            <li><a href="Introduction.html">Introduction</a></li>
+            <li><a href="ChannelsAndIsos.html">Channels and Isos</a></li>
+
+
+            <!--
+
+              Here you can add links to other pages of the documentation 
+              The 'divider' element creates a separator and additional
+              'nav-header' can be used to add sub-headings in the menu:
+
+              * <li class="divider"></li>
+              * <li><a href="...">...</a></li>
+              * <li class="nav-header">Sub-heading</li>
+
+            -->
+          </ul>
+        </div>
+      </div>
+    </div>
+    <a href="https://github.com/chkn/SharpBoomerang"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
+  </body>
+</html>
