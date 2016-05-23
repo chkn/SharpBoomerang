@@ -29,9 +29,9 @@ You'll need Visual Studio 2015 -- earlier versions will not work. Just load `Sha
 
 ### Xamarin Studio
 
-If you are using Mono, you'll need version 4.3.1 or newer (currently available in [alpha][2]). Just load `SharpBoomerang.sln` in Xamarin Studio and go!
+If you are using Mono, you'll need version 4.3.1 or newer (currently available in [beta][2]). Just load `SharpBoomerang.sln` in Xamarin Studio and go!
 
-[2]: http://www.mono-project.com/download/alpha/
+[2]: http://www.mono-project.com/download/beta/
 
 Docs
 ----
