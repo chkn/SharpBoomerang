@@ -90,7 +90,7 @@ let parseJson = StringInputChannel >> parser bjson
 let printJson = stringPrinter bjson
 
 (**
-Now we can parse/print some JSON:
+Now we can parse some JSON like so:
 *)
 
 let json = parseJson """
@@ -103,4 +103,18 @@ let json = parseJson """
 }
 """
 
+(**
+This yields an AST:
+*)
+
+(*** include-value: json ***)
+
+(**
+Then we can pass the same value back to `printJson`
+to print it back out again:
+*)
+
+(*** define-output: printed ***)
 printJson json
+
+(*** include-it: printed ***)

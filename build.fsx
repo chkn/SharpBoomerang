@@ -4,27 +4,30 @@ open System
 open System.IO
 open System.Diagnostics
 open System.ComponentModel
-
-[<Literal>]
-let Version = "0.0.1-pre1"
-
-/// Return path relative to the current file location
 let inline (/) p1 p2 = Path.Combine(p1, p2)
 let inline ``./`` p  = __SOURCE_DIRECTORY__ / p
 
+/// The version of the nuget package (bump this on each release)
+let Version = "0.0.1-pre1"
 
-// The following paths must be updated when FSharp.Formatting package is updated
-let FSharpFormattingPath = ``./`` "packages" / "FSharp.Formatting.2.10.3"
-#load  @"packages/FSharp.Formatting.2.10.3/FSharp.Formatting.fsx"
+// Paths of interest:
 
-
-// Other paths of interest
+/// The directory containing all the docs fsx files
 let docs = ``./`` "docs"
+
+/// The output directory into which the docs html files will be generated
 let output = ``./`` "docs-html"
-let nuspec = ``./`` "SharpBoomerang.nuspec"
+
+/// The path to the template used in the docs html generation
 let template = ``./`` "docs" / "tools" / "template.html"
 
-// Project info for docs
+/// The path to the nuspec for creating the nuget package
+let nuspec = ``./`` "SharpBoomerang.nuspec"
+
+/// The path in which nuget packages will be installed
+let packages = ``./`` "packages"
+
+/// Project info for the docs
 let projInfo =
   [
     "page-description", "SharpBoomerang documentation"
@@ -36,28 +39,36 @@ let projInfo =
 
 let quote (s : string) = "\"" + s.Replace("\"", "\\\"") + "\""
 let run prog args =
-    let proc = ProcessStartInfo(prog, String.Join (" ", Array.map quote args), UseShellExecute = false)
-               |> Process.Start
-    proc.WaitForExit()
-    if proc.ExitCode <> 0 then
-        failwith "Failed."
+    try
+        let proc = ProcessStartInfo(prog, String.Join (" ", Array.map quote args), UseShellExecute = false)
+                   |> Process.Start
+        proc.WaitForExit()
+        if proc.ExitCode <> 0 then
+            failwith "Failed."
+    with :? Win32Exception ->
+        printfn "Failed to run %s. Check that you are in a Visual Studio command prompt." prog
+        reraise()
 
 // Tools
 let git = run "git"
 let nuget = run "nuget"
-let msbuild args =
-    try
-        run "msbuild" args
-    with :? Win32Exception ->
-        try
-            run "xbuild" args
-        with :? Win32Exception as ex ->
-            printf "Failed to run msbuild. Check that you are in a Visual Studio command prompt.\n%O" ex
+let msbuild = run "msbuild"
+
+// Setup: Ensure F# formatting is available
+let FSharpFormattingPath = packages / "FSharp.Formatting"
+if not(Directory.Exists(FSharpFormattingPath)) then
+    nuget [| "install"; "FSharp.Formatting"; "-ExcludeVersion"; "-OutputDirectory"; packages |]
+//FIXME: hardcoded path
+#load  @"packages/FSharp.Formatting/FSharp.Formatting.fsx"
 
 // Tasks
-let makeBuild() = msbuild [| "/p:Configuration=Release" |]
+let makeBuild() =
+    msbuild [| "/p:Configuration=Release" |]
+
 let makeDocs()  =
-    FSharp.Literate.Literate.ProcessDirectory(docs, template, output, replacements = projInfo)
+    let fsi = FSharp.Literate.FsiEvaluator()
+    //fsi.EvaluationFailed.Add(fun e -> printf "%O" e)
+    FSharp.Literate.Literate.ProcessDirectory(docs, template, output, replacements = projInfo, fsiEvaluator = fsi)
     FSharp.Literate.Literate.ProcessMarkdown(``./`` "Readme.md", template, output / "index.html", replacements = projInfo)
 
     // Manually copy some files needed by the template
