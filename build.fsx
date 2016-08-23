@@ -96,7 +96,7 @@ let makePages() =
             match f with
             | "." | ".." | "" -> ()
             | _ ->
-                let p = f.Replace(Path.GetFileName(output), "")
+                let p = f.Replace(Path.GetFileName(output) + "/", "")
                 if Directory.Exists(f) then
                     if not(Directory.Exists(p)) then Directory.CreateDirectory(p) |> ignore
                     loop f
