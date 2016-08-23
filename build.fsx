@@ -5,27 +5,32 @@ open System.IO
 open System.Diagnostics
 open System.ComponentModel
 let inline (/) p1 p2 = Path.Combine(p1, p2)
-let inline ``./`` p  = __SOURCE_DIRECTORY__ / p
 
 /// The version of the nuget package (bump this on each release)
 let Version = "0.0.1-pre1"
 
 // Paths of interest:
 
-/// The directory containing all the docs fsx files
-let docs = ``./`` "docs"
+/// The root directory
+let root = __SOURCE_DIRECTORY__
 
-/// The output directory into which the docs html files will be generated
-let output = ``./`` "docs-html"
+/// The directories, relative to `root`, that will be converted to html
+let inputs = [
+    "docs"
+    "examples"
+]
 
-/// The path to the template used in the docs html generation
-let template = ``./`` "docs" / "tools" / "template.html"
+/// The path, relative to the above `inputs` dirs, to the template used in the html generation
+let template = "tools" / "template.html"
+
+/// The output directory into which the html files will be generated
+let output = root / "html"
 
 /// The path to the nuspec for creating the nuget package
-let nuspec = ``./`` "SharpBoomerang.nuspec"
+let nuspec = root / "SharpBoomerang.nuspec"
 
 /// The path in which nuget packages will be installed
-let packages = ``./`` "packages"
+let packages = root / "packages"
 
 /// Project info for the docs
 let projInfo =
@@ -68,8 +73,14 @@ let makeBuild() =
 let makeDocs()  =
     let fsi = FSharp.Literate.FsiEvaluator()
     //fsi.EvaluationFailed.Add(fun e -> printf "%O" e)
-    FSharp.Literate.Literate.ProcessDirectory(docs, template, output, replacements = projInfo, fsiEvaluator = fsi)
-    FSharp.Literate.Literate.ProcessMarkdown(``./`` "Readme.md", template, output / "index.html", replacements = projInfo)
+    inputs
+    |> List.iter (fun dir ->
+        let input = root / dir
+        let template = input / template
+        let output = output / dir
+        FSharp.Literate.Literate.ProcessDirectory(input, template, output, replacements = projInfo, fsiEvaluator = fsi)
+    )
+    FSharp.Literate.Literate.ProcessMarkdown(root / "Readme.md",  root / template, output / "index.html", replacements = projInfo)
 
     // Manually copy some files needed by the template
     output / "content" |> Directory.CreateDirectory |> ignore
@@ -99,14 +110,14 @@ let makePages() =
 
 
 let makeNupkg() =
-    if not(Directory.Exists(``./`` "bin" / "Release")) then makeBuild()
+    if not(Directory.Exists(root / "bin" / "Release")) then makeBuild()
     nuget [| "pack"; nuspec; "-Properties"; "version=" + Version |]
 
 let makeClean() =
     let rmrf p = try Directory.Delete(p, true) with :? DirectoryNotFoundException -> ()
-    rmrf (``./`` "bin")
-    rmrf (``./`` "obj")
-    rmrf (``./`` "docs-html")
+    rmrf (root / "bin")
+    rmrf (root / "obj")
+    rmrf (output)
     Directory.EnumerateFiles(__SOURCE_DIRECTORY__, "*.nupkg")
     |> Seq.iter (fun file -> File.Delete(file))
 

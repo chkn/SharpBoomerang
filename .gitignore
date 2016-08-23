@@ -6,6 +6,7 @@
 [Bb]in/
 packages/
 TestResults/
+html/
 
 # globs
 Makefile.in
@@ -16,6 +17,7 @@ Makefile.in
 *.pidb
 *.userprefs
 *.usertasks
+*.svclog
 config.log
 config.make
 config.status
