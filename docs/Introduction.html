@@ -18,8 +18,8 @@
     <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
-    <link type="text/css" rel="stylesheet" href="content/style.css" />
-    <script src="content/tips.js" type="text/javascript"></script>
+    <link type="text/css" rel="stylesheet" href="../content/style.css" />
+    <script src="../content/tips.js" type="text/javascript"></script>
     <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
@@ -29,10 +29,7 @@
     <div class="container">
       <div class="masthead">
         <ul class="nav nav-pills pull-right">
-          <!--
-          <li><a href="http://fsharp.org">fsharp.org</a></li>
-          <li><a href="https://github.com/chkn/SharpBoomerang">github page</a></li>
-        -->
+          <li><a href="../index.html">Home page</a></li>
         </ul>
         <h3 class="muted">SharpBoomerang</h3>
       </div>
@@ -40,29 +37,21 @@
       <div class="row">
         <div class="span9" id="main">
           <h1>Introduction</h1>
-
 <p>Hey there! This document will give you a quick crash course in SharpBoomerang.</p>
-
 <p>SharpBoomerang is a library for specifying a grammar for both a parser and a
 pretty printer simultaneously. Every construct in SharpBoomerang is designed
 to be bidirectional.</p>
-
 <h2>Follow Along</h2>
-
 <p>Open this file in Xamarin Studio or Visual Studio and use Ctrl+Enter (XS) or
 Alt+Enter (VS) to execute the following code snippets in F# interactive.</p>
-
 <p>The first thing we need to do is to load the source files we'll be using:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="prep">#load</span> <span class="s">@&quot;../SharpBoomerang.fsx&quot;</span>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Then, open the SharpBoomerang namespaces to bring its functions into the global scope:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 </pre></td>
@@ -71,11 +60,8 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.</p>
 </code></pre></td>
 </tr>
 </table>
-
 <h2>Hello, World!</h2>
-
 <p>Okay, now that we're set up, here's how you'd write a boomerang for "Hello, World!":</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -90,49 +76,37 @@ Alt+Enter (VS) to execute the following code snippets in F# interactive.</p>
 </code></pre></td>
 </tr>
 </table>
-
 <p>By convention, boomerangs start with the letter "b." <code>blit</code> is the boomerang for
 parsing/printing a literal value. To be more specific, <code>blit</code> reads from its channel and
 then either parses, expecting to find the given string, or prints the string. The percent
 sign (%) prefix operator creates a read-only channel that holds a constant value. (We'll
 talk more about channels later.)</p>
-
 <p>Similarly, the <code>bws</code> boomerang parses a whitespace character and writes that to its channel.
 When printing, it reads a character from the channel and prints that character. Most boomerangs
 accept a channel argument and use it in this fashion.</p>
-
 <p>As a simple example, let's see how we can parse "Hello World!" using that boomerang:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 9)" onmouseover="showTip(event, 'fs3', 9)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs6', 10)" onmouseover="showTip(event, 'fs6', 10)" class="f">parseFromStr</span> <span class="s">&quot;Hello World!&quot;</span>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Run that annnddd... nothing happens. However, if you try changing the "Hello World!" string
 to something like "foobar", you'll get an exception because the parse failed.</p>
-
 <p>Just for completeness, here's the printer for that:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs3', 11)" onmouseover="showTip(event, 'fs3', 11)" class="f">bhello</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 12)" onmouseover="showTip(event, 'fs7', 12)" class="f">printToStr</span> <span class="c">// -&gt; &quot;Hello, World!&quot;</span>
 </code></pre></td>
 </tr>
 </table>
-
 <h2>Parsing a Name</h2>
-
 <p>The "Hello, World!" example illustrated how we can write a parser to validate some input.
 However, often, you will want to extract some <em>data</em> from the input. Let's make a simple parser
 to parse a first and last name separated by whitespace, possibly with a title beforehand.</p>
-
 <p>Side note: In the real world, the format of names varies wildly. This is not meant to be a
 comprehensive parser, only a simple example.</p>
-
 <p>We'll start by defining some data structures to hold our name:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
 <span class="l"> 2: </span>
 <span class="l"> 3: </span>
@@ -157,13 +131,10 @@ comprehensive parser, only a simple example.</p>
 </code></pre></td>
 </tr>
 </table>
-
 <h3>Parsing a Choice</h3>
-
 <p>Let's define a boomerang to parse <code>Title</code>. We've already used the <code>blit</code> boomerang to parse a
 literal string. We can use multiple <code>blit</code>s separated by the first-successful-parse operator,
 <code>&lt;|&gt;</code>, to try to parse a few different titles:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -176,9 +147,7 @@ literal string. We can use multiple <code>blit</code>s separated by the first-su
 </code></pre></td>
 </tr>
 </table>
-
 <p>Let's try that out:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -193,57 +162,45 @@ literal string. We can use multiple <code>blit</code>s separated by the first-su
 </code></pre></td>
 </tr>
 </table>
-
 <p>Play with the strings passed to <code>parseFromStr</code> above and you'll see that it correctly
 only accepts "Mr", "Ms", or "Dr".</p>
-
 <p>Now let's try the printer:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs18', 31)" onmouseover="showTip(event, 'fs18', 31)" class="f">btitle1</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 32)" onmouseover="showTip(event, 'fs7', 32)" class="f">printToStr</span>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Oh no! That always prints "Mr" no matter what. To see why this is, we need to talk a little more
 about channels.</p>
-
 <h3>Channels</h3>
-
 <p>Let's take a look at how the <code>Boomerang</code> types are defined:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs19', 33)" onmouseover="showTip(event, 'fs19', 33)" class="i">Boomerang</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 34)" onmouseover="showTip(event, 'fs20', 34)" class="t">Context</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs20', 35)" onmouseover="showTip(event, 'fs20', 35)" class="t">Context</span>
-<span class="k">type</span> <span onmouseout="hideTip(event, 'fs21', 36)" onmouseover="showTip(event, 'fs21', 36)" class="i">Boomerang</span><span class="o">&lt;</span><span class="o">&#39;</span><span class="i">t</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">&#39;</span><span class="i">t</span> <span onmouseout="hideTip(event, 'fs22', 37)" onmouseover="showTip(event, 'fs22', 37)" class="t">channel</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs21', 38)" onmouseover="showTip(event, 'fs21', 38)" class="i">Boomerang</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs19', 33)" onmouseover="showTip(event, 'fs19', 33)" class="t">Boomerang</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 34)" onmouseover="showTip(event, 'fs20', 34)" class="t">Context</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs20', 35)" onmouseover="showTip(event, 'fs20', 35)" class="t">Context</span>
+<span class="k">type</span> <span onmouseout="hideTip(event, 'fs21', 36)" onmouseover="showTip(event, 'fs21', 36)" class="t">Boomerang</span><span class="o">&lt;</span><span class="o">&#39;</span><span class="i">t</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">&#39;</span><span class="i">t</span> <span onmouseout="hideTip(event, 'fs22', 37)" onmouseover="showTip(event, 'fs22', 37)" class="t">channel</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs21', 38)" onmouseover="showTip(event, 'fs21', 38)" class="t">Boomerang</span>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Our <code>bhello</code> boomerang from the first example is an instance of the first, non-generic <code>Boomerang</code> type.
 As we said, this type basically validates some input. The second type of boomerang operates on some data.
 For instance, the <code>bstr</code> built-in boomerang non-greedily parses a string. Thus its type is <code>Boomerang&lt;string&gt;</code>,
 and it accepts a <code>string channel</code> as its first argument. When parsing, <code>bstr</code> writes the string that it parsed
 into its channel. When printing, <code>bstr</code> reads a string from its channel and prints that. Most boomerangs behave
 in this manner.</p>
-
 <p>So the reason our previous example always prints "Mr" is that the first <code>blit</code> boomerang reads the string
 "Mr" from its channel and prints it. Then, because it succeeded, the <code>&lt;|&gt;</code> operator does not execute any
 of the other boomerangs. In fact, you'll notice that our <code>btitle1</code> is typed <code>Boomerang</code>. What we really want
 is to expose a channel to which the parsed result will be written and from which the value to print will be read.</p>
-
 <p>To do this, we'll use the channel-propagating first-successful-parse operator, <code>&lt;.&gt;</code>. That operator
 behaves the same as <code>&lt;|&gt;</code>, except that it exposes the successful parse on a channel that you pass
 to the resulting function. You'll notice that many of the operators in SharpBoomerang come in pairs
 like this.</p>
-
 <p>Simply changing <code>&lt;|&gt;</code> to <code>&lt;.&gt;</code> in our <code>btitle1</code> boomerang yields a compiler error. Passing a channel
 (with %"..") to our <code>blit</code> partially applied it, consuming the channel argument. What we really want
 is to only pass that constant when parsing, but to print the value propagated by the <code>&lt;.&gt;</code> operator.
 We can do this with the <code>&lt;??</code> operator:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -256,13 +213,11 @@ We can do this with the <code>&lt;??</code> operator:</p>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Up to now, we've been dealing with boomerangs of type <code>Boomerang</code>. For these we've used the <code>parseFromStr</code>
 and <code>printToStr</code> functions. However, you'll note that the type of <code>btitle2</code> is now effectively
 <code>Boomerang&lt;string&gt;</code>. This means that it now exposes an <code>IChannel&lt;string&gt;</code> or <code>string channel</code>. This
 enables us to read the title that was parsed and write the title to be printed. We do this using the
 <code>parser</code> and <code>stringPrinter</code> functions like so:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -277,13 +232,11 @@ enables us to read the title that was parsed and write the title to be printed. 
 </code></pre></td>
 </tr>
 </table>
-
 <p>Ok, so now we have a couple functions: <code>parseTitle2</code> that takes a string and parses it into a title,
 returning the resulting string, and <code>printTitle2</code> that takes a title string and prints it. This is
 actually pretty useless. Instead of dealing with the title as a string, it would be much more useful
 to deal with our <code>Title</code> discriminated union. We can do that by using the <code>&gt;&gt;%</code> operator to yield a
 union case if the <code>blit</code> boomerang matches, like so:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
 <span class="l"> 2: </span>
 <span class="l"> 3: </span>
@@ -308,40 +261,31 @@ union case if the <code>blit</code> boomerang matches, like so:</p>
 </code></pre></td>
 </tr>
 </table>
-
 <p>Note that we removed the <code>&lt;??</code> operator because we no longer care about the string value-- the
 <code>&gt;&gt;%</code> operator only cares about the success or failure of the preceeding boomerang.</p>
-
 <p>Now the type of <code>btitle3</code> is <code>Boomerang&lt;Title&gt;</code> and this is looking much more useful! However,
 this is kinda boilerplate-- parsing a discriminated union where none of the cases have arguments
 is pretty common, and we have a built-in boomerang for that: <code>bdu&lt;Title&gt;</code></p>
-
 <p>Let's make our final boomerang for the title, also accepting an optional period (".") and whitespace after it:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 </pre></td>
 <td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs32', 69)" onmouseover="showTip(event, 'fs32', 69)" class="f">bspace</span> <span class="o">=</span> <span class="o">!+</span>(<span onmouseout="hideTip(event, 'fs5', 70)" onmouseover="showTip(event, 'fs5', 70)" class="f">bws</span> <span class="o">%</span><span class="s">&#39; &#39;</span>) <span class="c">// Parses one or more whitespace characters; prints a single space, &#39; &#39;</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs33', 71)" onmouseover="showTip(event, 'fs33', 71)" class="f">btitle</span> <span class="o">=</span> <span class="o">~~~</span>(<span onmouseout="hideTip(event, 'fs34', 72)" onmouseover="showTip(event, 'fs34', 72)" class="i">bdu</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs8', 73)" onmouseover="showTip(event, 'fs8', 73)" class="t">Title</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span class="o">~~</span>(<span onmouseout="hideTip(event, 'fs4', 74)" onmouseover="showTip(event, 'fs4', 74)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;.&quot;</span>) <span class="o">%</span><span class="k">true</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 75)" onmouseover="showTip(event, 'fs32', 75)" class="f">bspace</span>)
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs33', 71)" onmouseover="showTip(event, 'fs33', 71)" class="f">btitle</span> <span class="o">=</span> <span class="o">~~~</span>(<span onmouseout="hideTip(event, 'fs34', 72)" onmouseover="showTip(event, 'fs34', 72)" class="f">bdu</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs8', 73)" onmouseover="showTip(event, 'fs8', 73)" class="t">Title</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span class="o">~~</span>(<span onmouseout="hideTip(event, 'fs4', 74)" onmouseover="showTip(event, 'fs4', 74)" class="f">blit</span> <span class="o">%</span><span class="s">&quot;.&quot;</span>) <span class="o">%</span><span class="k">true</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 75)" onmouseover="showTip(event, 'fs32', 75)" class="f">bspace</span>)
 </code></pre></td>
 </tr>
 </table>
-
 <p>Note that the <code>~~~</code> prefix operator makes its contents optional, and the <code>.&gt;&gt;</code> operator takes a
 <code>Boomerang&lt;'t&gt;</code> and <code>Boomerang</code> in sequence resulting in a <code>Boomerang&lt;'t&gt;</code>. So the final type of
 our <code>btitle</code> boomerang is <code>Boomerang&lt;Title option&gt;</code>.</p>
-
 <h3>Operators and Combinators</h3>
-
 <p>The real power of SharpBoomerang is in combining the built-in boomerangs with operators to create
 new boomerangs, and then combining those, and so on. Hopefully, at this point you have an idea of
 how this basically works. You've seen the built-in combinator, <code>blit</code>, for literal strings. We've
 also just introduced <code>bdu&lt;'a&gt;</code> for discriminated unions. There are more of these, including <code>bws</code>
 for parsing whitespace, and <code>bstr</code> for parsing a non-greedy arbitrary string of characters.</p>
-
 <p>Putting these all together, let's cut to the chase and define the full boomerang for parsing
 our name:</p>
-
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
@@ -350,7 +294,7 @@ our name:</p>
 <span class="l">6: </span>
 <span class="l">7: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs35', 76)" onmouseover="showTip(event, 'fs35', 76)" class="f">bname</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs33', 77)" onmouseover="showTip(event, 'fs33', 77)" class="f">btitle</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 78)" onmouseover="showTip(event, 'fs36', 78)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 79)" onmouseover="showTip(event, 'fs32', 79)" class="f">bspace</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 80)" onmouseover="showTip(event, 'fs36', 80)" class="i">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> ((<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs37', 81)" onmouseover="showTip(event, 'fs37', 81)" class="i">t</span>, <span onmouseout="hideTip(event, 'fs38', 82)" onmouseover="showTip(event, 'fs38', 82)" class="i">f</span>, <span onmouseout="hideTip(event, 'fs39', 83)" onmouseover="showTip(event, 'fs39', 83)" class="i">l</span>) <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs8', 84)" onmouseover="showTip(event, 'fs8', 84)" class="i">Title</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 85)" onmouseover="showTip(event, 'fs37', 85)" class="i">t</span>; <span class="i">First</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 86)" onmouseover="showTip(event, 'fs38', 86)" class="i">f</span>; <span class="i">Last</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 87)" onmouseover="showTip(event, 'fs39', 87)" class="i">l</span> }), (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs40', 88)" onmouseover="showTip(event, 'fs40', 88)" class="i">n</span> <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs40', 89)" onmouseover="showTip(event, 'fs40', 89)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs41', 90)" onmouseover="showTip(event, 'fs41', 90)" class="i">Title</span>, <span onmouseout="hideTip(event, 'fs40', 91)" onmouseover="showTip(event, 'fs40', 91)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs15', 92)" onmouseover="showTip(event, 'fs15', 92)" class="i">First</span>, <span onmouseout="hideTip(event, 'fs40', 93)" onmouseover="showTip(event, 'fs40', 93)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs17', 94)" onmouseover="showTip(event, 'fs17', 94)" class="i">Last</span>)))
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs35', 76)" onmouseover="showTip(event, 'fs35', 76)" class="f">bname</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs33', 77)" onmouseover="showTip(event, 'fs33', 77)" class="f">btitle</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 78)" onmouseover="showTip(event, 'fs36', 78)" class="f">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;</span> <span onmouseout="hideTip(event, 'fs32', 79)" onmouseover="showTip(event, 'fs32', 79)" class="f">bspace</span> <span class="o">.</span><span class="o">&gt;&gt;.</span> <span onmouseout="hideTip(event, 'fs36', 80)" onmouseover="showTip(event, 'fs36', 80)" class="f">bstr</span> <span class="o">.</span><span class="o">&gt;&gt;%</span> ((<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs37', 81)" onmouseover="showTip(event, 'fs37', 81)" class="i">t</span>, <span onmouseout="hideTip(event, 'fs38', 82)" onmouseover="showTip(event, 'fs38', 82)" class="i">f</span>, <span onmouseout="hideTip(event, 'fs39', 83)" onmouseover="showTip(event, 'fs39', 83)" class="i">l</span>) <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs8', 84)" onmouseover="showTip(event, 'fs8', 84)" class="i">Title</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 85)" onmouseover="showTip(event, 'fs37', 85)" class="i">t</span>; <span class="i">First</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 86)" onmouseover="showTip(event, 'fs38', 86)" class="i">f</span>; <span class="i">Last</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 87)" onmouseover="showTip(event, 'fs39', 87)" class="i">l</span> }), (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs40', 88)" onmouseover="showTip(event, 'fs40', 88)" class="i">n</span> <span class="k">-&gt;</span> (<span onmouseout="hideTip(event, 'fs40', 89)" onmouseover="showTip(event, 'fs40', 89)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs41', 90)" onmouseover="showTip(event, 'fs41', 90)" class="i">Title</span>, <span onmouseout="hideTip(event, 'fs40', 91)" onmouseover="showTip(event, 'fs40', 91)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs15', 92)" onmouseover="showTip(event, 'fs15', 92)" class="i">First</span>, <span onmouseout="hideTip(event, 'fs40', 93)" onmouseover="showTip(event, 'fs40', 93)" class="i">n</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs17', 94)" onmouseover="showTip(event, 'fs17', 94)" class="i">Last</span>)))
 
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs42', 95)" onmouseover="showTip(event, 'fs42', 95)" class="f">parseName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 96)" onmouseover="showTip(event, 'fs25', 96)" class="t">StringInputChannel</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs26', 97)" onmouseover="showTip(event, 'fs26', 97)" class="f">parser</span> <span onmouseout="hideTip(event, 'fs35', 98)" onmouseover="showTip(event, 'fs35', 98)" class="f">bname</span>
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs43', 99)" onmouseover="showTip(event, 'fs43', 99)" class="f">printName</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs28', 100)" onmouseover="showTip(event, 'fs28', 100)" class="f">stringPrinter</span> <span onmouseout="hideTip(event, 'fs35', 101)" onmouseover="showTip(event, 'fs35', 101)" class="f">bname</span>
@@ -360,14 +304,12 @@ our name:</p>
 </code></pre></td>
 </tr>
 </table>
-
 <p>We've already seen the <code>.&gt;&gt;</code> operator, which sequentially applies the left and then the right boomerang,
 propagating the channel from the left. When we say "propagating," we mean exposing that channel in the
 resulting function. As a rule of thumb, operators with dots (.) expose the channel(s) from the boomerang(s)
 that are adjacent to the dot(s). For instance, the <code>.&gt;&gt;.</code> operator exposes the channels from both boomerangs
 as a tuple. The <code>.&gt;&gt;%</code> maps the channel from the left boomerang using an <code>Iso</code>, which is how the type of
 <code>bname</code> is <code>Boomerang&lt;Name&gt;</code>. See <code>ChannelsAndIsos.fsx</code> for more information about that.</p>
-
 <p>To be continued.</p>
 
           <div class="tip" id="fs1">namespace SharpBoomerang</div>
@@ -419,14 +361,12 @@ as a tuple. The <code>.&gt;&gt;%</code> maps the channel from the left boomerang
         <div class="span3">
 
           <ul class="nav nav-list" id="menu">
-            <li class="nav-header">SharpBoomerang</li>
-            <li><a href="index.html">Home page</a></li>
-            <li class="divider"></li>
-            <li><a href="https://www.nuget.org/packages/SharpBoomerang">Get Library via NuGet</a></li>
-            <li><a href="https://github.com/chkn/SharpBoomerang">Source Code on GitHub</a></li>
-            <li class="divider"></li>
+            <li class="nav-header">Docs</li>
             <li><a href="Introduction.html">Introduction</a></li>
             <li><a href="ChannelsAndIsos.html">Channels and Isos</a></li>
+            <li class="divider"></li>
+            <li class="nav-header">Examples</li>
+            <li><a href="../examples/JSON.html">Parsing JSON</a></li>
 
 
             <!--
