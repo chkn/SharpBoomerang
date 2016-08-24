@@ -29,14 +29,17 @@ You'll need Visual Studio 2015 -- earlier versions will not work. Just load `Sha
 
 ### Xamarin Studio
 
-If you are using Mono, you'll need version 4.3.1 or newer (currently available in [beta][2]). Just load `SharpBoomerang.sln` in Xamarin Studio and go!
+If you are using Mono, you'll need version 4.3.1 or newer. Just load `SharpBoomerang.sln` in Xamarin Studio and go!
 
 [2]: http://www.mono-project.com/download/beta/
 
 Docs
 ----
 
-Documentation can be found in the `docs` directory, or [online][3]. The HTML docs can be built by running `build.fsx`.
+Documentation can be found in the `docs` directory, or [online][3]. The HTML docs can be built like this:
+
+    [Windows] build.cmd docs
+    [Mac] build.fsx docs
 
 [3]: http://chkn.github.io/SharpBoomerang/Introduction.html
 
@@ -85,6 +88,16 @@ Tests
 -----
 
 The NUnit tests are under the `tests` directory. The tests should be runnable from the Unit Tests pad in Xamarin Studio or the Test Explorer in Visual Studio.
+
+Building the NuGet Package
+--------------------------
+
+Sometimes it's helpful to build the NuGet package locally. To do this:
+
+    [Windows] build.cmd nupkg
+    [Mac] build.fsx nupkg
+
+If you have not already built a Release build, the build will run as part of this command. Note that you'll need to have previously restored the NuGet packages otherwise it will fail.
 
 
 Contributions, Feedback, etc.
