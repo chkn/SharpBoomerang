@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Net
 open System.Diagnostics
 open System.ComponentModel
 let inline (/) p1 p2 = Path.Combine(p1, p2)
@@ -32,6 +33,9 @@ let nuspec = root / "SharpBoomerang.nuspec"
 /// The path in which nuget packages will be installed
 let packages = root / "packages"
 
+/// The URL to download nuget.exe for windows
+let nugetURL = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+
 /// Project info for the docs
 let projInfo =
   [
@@ -53,11 +57,23 @@ let run prog args =
     with :? Win32Exception ->
         printfn "Failed to run %s. Check that you are in a Visual Studio command prompt." prog
         reraise()
+let download (url : string) localPath =
+    use client = new WebClient()
+    client.DownloadFile(url, localPath)
 
 // Tools
 let git = run "git"
-let nuget = run "nuget"
 let msbuild = run "msbuild"
+let nuget args =
+    try
+        run "nuget" args
+    with :? Win32Exception ->
+        if Environment.OSVersion.Platform <> PlatformID.Win32NT then reraise()
+        printfn "This script requires nuget.exe. Would you like to download it to this directory? [y/N]"
+        if Console.ReadKey(true).Key <> ConsoleKey.Y then printfn "Failed to run nuget:"; reraise()
+        printfn "Downloading nuget.exe..."
+        download nugetURL (root / "nuget.exe")
+        run "nuget" args
 
 // Setup: Ensure F# formatting is available
 let FSharpFormattingPath = packages / "FSharp.Formatting"

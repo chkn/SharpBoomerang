@@ -18,6 +18,7 @@ Makefile.in
 *.userprefs
 *.usertasks
 *.svclog
+*.exe
 config.log
 config.make
 config.status

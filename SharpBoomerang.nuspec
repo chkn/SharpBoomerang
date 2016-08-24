@@ -20,7 +20,7 @@ to be bidirectional.
     <tags>fsharp F# parse parsing pretty print printer formatter grammar combinators</tags>
    </metadata>
    <files>
-    <file src="bin/Release/SharpBoomerang.dll" target="lib\portable-net45+netcore45+wpa81+wp8\SharpBoomerang.dll" />
-    <file src="bin/Release/SharpBoomerang.xml" target="lib\portable-net45+netcore45+wpa81+wp8\SharpBoomerang.xml" />
+    <file src="bin/Release/SharpBoomerang.dll" target="lib/portable-net45+netcore45+wpa81+wp8/SharpBoomerang.dll" />
+    <file src="bin/Release/SharpBoomerang.xml" target="lib/portable-net45+netcore45+wpa81+wp8/SharpBoomerang.xml" />
    </files>
 </package>
