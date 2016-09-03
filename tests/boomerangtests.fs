@@ -1,12 +1,18 @@
 ﻿[<NUnit.Framework.TestFixture>]
-module SharpBoomerang.Tests.BoomerangTests
+module SharpBoomerang.Tests.Boomerang
 
 open System
 open NUnit.Framework
 
 open SharpBoomerang
 open SharpBoomerang.Combinators
-open SharpBoomerang.Tests.IsoTests
+open SharpBoomerang.Tests.Iso
+
+type DU =
+    | DUStr of string
+    | DUFloat of float
+    | DUList of DU seq
+    | DUMap of Map<string,int>
 
 type Title =
     | Mr
