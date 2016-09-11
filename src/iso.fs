@@ -31,7 +31,7 @@ type Iso =
     // This method is a work in progress. We will add cases as they come up.
     static member ofFn([<ReflectedDefinition(true)>] expr : Expr<('a -> 'b)>) : Iso<_,_> =
         match expr with
-        | WithValue(:? ('a -> 'b) as fn, _, Lambda(arg, body)) ->
+        | WithValue(:? ('a -> 'b) as fn, _, expr) ->
             let rec visitAll exprs a = seq { for e in exprs do yield visit e a }
             and visit e (a : Map<Var,LExpr>) : LExpr =
 
@@ -188,11 +188,26 @@ type Iso =
                     |> replace arg inner
 
                 | other -> failwithf "Unsupported expr: %A" other
-            let b = LExpr.Parameter(typeof<'b>)
-            let a = Map.ofList [(arg, b :> LExpr)]
-            let del = LExpr.Lambda<Func<'b,'a>>(visit body a, b).Compile()
-            fn, del.Invoke
-        | other -> failwithf "Cannot determine inverse for expr: %A" other
+
+            // But first, we need to find the outer lambda expr
+            let rec outerVisit expr args =
+                match expr with
+                | Let(arg, body, following) ->
+                    args
+                    |> Map.add arg (visit body args)
+                    |> outerVisit following
+                | Lambda(arg, body) ->
+                    let newArg  = LExpr.Parameter(typeof<'b>)
+                    let newBody =
+                        args
+                        |> Map.add arg (newArg :> _)
+                        |> visit body
+                    let del = LExpr.Lambda<Func<'b,'a>>(newBody, newArg).Compile()
+                    fn, del.Invoke
+                | other -> failwithf "Cannot determine inverse for expr: %A" other
+            outerVisit expr Map.empty
+
+        | other -> failwithf "Impossible expr: %A" other
 
 /// A module of predefined `Iso`s
 module Isos =
