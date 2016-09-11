@@ -114,7 +114,7 @@ let ``implicit Iso of String.ToLowerInvariant`` (NonNull a) (NonNull b) =
     Iso.ofFn (fun (s : string) -> s.ToLowerInvariant())
     |> forValues ((a : string).ToUpperInvariant()) ((b : string).ToLowerInvariant())
 
-//[<Property>]
+[<Property>]
 let ``implicit Iso of String.Join`` (NonEmptyArray a) (NonNull b) =
     Iso.ofFn (fun a -> String.Join(", ", (a : NonNull<string> array)))
     |> forValues a b
@@ -155,7 +155,7 @@ let ``implicit Iso of Map.ofSeq piped`` (a : (string * int)) (b : MapCase) =
     Iso.ofFn (fun (s : seq<_>) -> s |> Map.ofSeq |> MapCase)
     |> forSeqValues ([a] :> _) b
 
-// Other types:
+// Functions:
 
 [<Property>]
 let ``implicit Iso of function mapping same types`` () =
@@ -174,6 +174,8 @@ let ``implicit Iso of function mapping different types`` () =
         "two", 2
     ]
 
+// Tuples:
+
 [<Property>]
 let ``implicit Iso of homogeneous tuple`` a b =
     Iso.ofFn (fun (a, b) -> a + 1, b - 1)
@@ -182,4 +184,28 @@ let ``implicit Iso of homogeneous tuple`` a b =
 [<Property>]
 let ``implicit Iso of heterogeneous tuple`` a b =
     Iso.ofFn (fun (a, b, c : string) -> a + 1, b - 1, String(c.Reverse().ToArray()))
+    |> forValues a b
+
+// Discriminated Unions:
+
+type DU =
+    | DUStr of string
+    | DUFloat of float
+    | DUFloatStr of float * string
+    | DUList of DU seq
+    | DUMap of Map<string,int>
+
+[<Property>]
+let ``implicit Iso of union single arg`` a b =
+    Iso.ofFn (fun s -> DUStr s)
+    |> forValues a b
+
+[<Property>]
+let ``implicit Iso of union single arg piped`` a b =
+    Iso.ofFn (fun s -> s |> DUStr)
+    |> forValues a b
+
+[<Property>]
+let ``implicit Iso of union two args`` a b =
+    Iso.ofFn(fun (f, s) -> DUFloatStr(f, s))
     |> forValues a b

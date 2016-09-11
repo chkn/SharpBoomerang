@@ -1,7 +1,6 @@
 ﻿namespace SharpBoomerang
 
 open System
-open System.Linq
 open System.Linq.Expressions
 open System.Reflection
 open System.Text.RegularExpressions
@@ -16,14 +15,14 @@ open Microsoft.FSharp.Quotations.DerivedPatterns
 
 (*
 The following isomorphism type, Iso, is borrowed from,
-and thus compatible with, Aether (https://github.com/xyncro/aether).
+ and thus compatible with, Aether (https://github.com/xyncro/aether).
 *)
 
 /// Total, one-to-one isomorphism of a <> b
 type Iso<'a,'b> = ('a -> 'b) * ('b -> 'a)
 
-[<AbstractClass; Sealed>]
-type Iso private () =
+/// Convenience methods for creating an `Iso`
+type Iso =
 
     /// Represents an Iso that only supports a single direction transformation
     static member oneWay(fn : 'a -> 'b) : Iso<_,_> = fn, (fun _ -> failwith "Reverse transformation not supported")
@@ -36,29 +35,7 @@ type Iso private () =
             let rec visitAll exprs a = seq { for e in exprs do yield visit e a }
             and visit e (a : Map<Var,LExpr>) : LExpr =
 
-                // Call inversion
-                //  Given a chain of calls, A(B(C(d))) = d'
-                //    where A, B, and C are functions and d is some argument expression,
-                //  the inverse of that is C'(B'(A'(d'))) = d,
-                //    where A', B', and C' are the inverse functions of A, B, and C respectively.
-                let rec (|Invert|_|) = function
-                    | SpecificCall <@@ (|>) @@> (_, _, [Invert(e,_); _]) as skipped -> Some (e, Some skipped)
-                    | SpecificCall <@@ (|>) @@> (_, _, [e; _]) as skipped -> Some (e, Some skipped)
-
-                    // 1 argument
-                    | Call(_, _, [Invert(e,_)]) as skipped -> Some (e, Some skipped)
-                    | Call(_, _, [e]) as skipped -> Some (e, Some skipped)
-                    | NewUnionCase(_, [Invert(e,_)]) as skipped -> Some (e, Some skipped)
-                    | NewUnionCase(_, [e]) as skipped -> Some (e, Some skipped)
-
-                    // 2 arguments
-                    | Call(_, _, [_; Invert(e,_)]) as skipped -> Some (e, Some skipped)
-                    | Call(_, _, [_; e]) as skipped -> Some (e, Some skipped)
-                    | NewUnionCase(_, [_; Invert(e,_)]) as skipped -> Some (e, Some skipped)
-                    | NewUnionCase(_, [_; e]) as skipped -> Some (e, Some skipped)
-
-                    | e -> Some (e, None)
-
+                /// Helper function generally used with the Invert active pattern
                 let replace expr inExpr withLExpr =
                     match inExpr with
                     | Some(e) ->
@@ -68,51 +45,56 @@ type Iso private () =
                                                 let var = Var("_", expr.Type)
                                                 let varExpr = Expr.Var(var)
                                                 var, e |> Expr.replace (function | x when x = expr -> Some varExpr | _ -> None)
-                        let a = a.Add(var, withLExpr)
-                        visit newExpr a
+                        a
+                        |> Map.add var withLExpr
+                        |> visit newExpr
                     | _ -> withLExpr
 
                 match e with
                 // Values:
-                | Value(v, _) -> LExpr.Constant(v) :> _
                 | Var(v) -> a.[v]
+                | Value(v, _) -> LExpr.Constant(v) :> _
                 | Coerce(e, t) -> LExpr.Retype(visit e a, t)
+
+                // Strictly speaking, the inverse of NewObject for an arbitrary type is
+                //  undefined, but we need this here for cases like raise(Exception(...))
                 | NewObject(ctor, args) -> LExpr.New(ctor, visitAll args a) :> _
 
                 // DU:
                 | NewUnionCase(case, [Invert(arg, inner)]) ->
                     // The inverse of creating a union with one arg is decomposing the case into the arg
-                    let p = visit arg a
-                    let prop = case.GetFields().Single()
-                    LExpr.Property(LExpr.Retype(p, prop.DeclaringType), prop) |> replace arg inner
+                    let prop = Array.exactlyOne (case.GetFields())
+                    LExpr.Property(LExpr.Retype(visit arg a, prop.DeclaringType), prop)
+                    |> replace arg inner
+                | NewUnionCase(case, args) ->
+                    // For our purposes, the inverse of creating a union case with more than one arg is decomposing into a tuple
+                    let props = case.GetFields()
+                    let propGets = (args, props)
+                                   ||> Seq.map2 (fun arg prop -> LExpr.Property(visit arg a, prop) :> LExpr)
+                                   |> Seq.toArray
+                    let types = propGets |> Array.map (fun p -> p.Type)
+                    LExpr.Tuple(FSharpType.MakeTupleType(types), propGets)
 
                 // Tuple:
-                // FIXME: Generalize this to other expressions than NewTuple
-                | TupleDecompose(t, args, (NewTuple(exprs) as nt)) when typeof<'b> = nt.Type ->
-                    let inpts, a = Seq.zip args exprs
-                                |> Seq.map (fun (v, e) -> v, LExpr.Parameter(e.Type, v.Name))
-                                |> Seq.mapFold (fun a t -> snd t, a |> Map.add (fst t) (snd t :> LExpr)) a
-                    let outps = args |> List.map (fun v -> LExpr.Parameter(v.Type, v.Name))
-                    let objs = outps |> List.map (fun p -> LExpr.Convert(p, typeof<obj>) :> LExpr)
-                    let makeTuple = typeinfoof<FSharpValue>.GetMethod("MakeTuple")
-                    let getTupleFields = typeinfoof<FSharpValue>.GetMethod("GetTupleFields")
-                    let body =
-                        [
-                            LExpr.AssignAll(inpts, LExpr.Call(getTupleFields, visit t a)) |> Seq.singleton;
-                            Seq.zip outps exprs |> Seq.map (fun (p, e) -> LExpr.Assign(p, visit e a) :> LExpr);
-                            LExpr.Convert(LExpr.Call(makeTuple, LExpr.NewArrayInit(typeof<obj>, objs), LExpr.Constant(t.Type)), t.Type) :> LExpr |> Seq.singleton
-                        ]
-                        |> Seq.concat
-                        |> Seq.toList
-                    for v in args do
-                        a.Remove(v) |> ignore
-                    LExpr.Block(t.Type, Seq.append inpts outps, body) :> _
+                | NewTuple(args) as nt ->
+                    // For our purposes, the inverse of creating a tuple is creating a tuple of the inverse of our args
+                    let inverseArgs = visitAll args a |> Seq.toArray
+                    let types = inverseArgs |> Array.map (fun a -> a.Type)
+                    LExpr.Tuple(FSharpType.MakeTupleType(types), inverseArgs)
+                | TupleDecompose(t, args, (TupleCompose(_, _, exprs) as nt)) ->
+                    // The inverse of decomposing a tuple is creating a tuple
+                    let inpts, a = (args, exprs)
+                                   ||> Seq.map2 (fun v e -> v, LExpr.Parameter(e.Type, v.Name))
+                                   |> Seq.mapFold (fun a (v, p) -> p, a |> Map.add v (p :> LExpr)) a
+                    LExpr.Block(t.Type, inpts,
+                        LExpr.AssignFromTuple(inpts, visit t a),
+                        visit nt a
+                    ) :> _
 
                 | Let(v, body, following) ->
                     let p = LExpr.Parameter(v.Type, v.Name)
                     let a = a.Add(v, p)
-                    let res = LExpr.Block([| p |], LExpr.Assign(p, visit body a), visit following a)
-                    res :> _
+                    LExpr.Block([| p |], LExpr.Assign(p, visit body a), visit following a) :> _
 
                 // Exceptions:
                 | SpecificCall <@@ raise @@> (_, _, [arg]) -> LExpr.Throw(visit arg a, e.Type) :> _
@@ -122,8 +104,7 @@ type Iso private () =
                 | Lambda(v, e) ->
                     // We swap the argument and return types
                     let p = LExpr.Parameter(e.Type, v.Name)
-                    let a = a.Add(v, p)
-                    LExpr.FSharpFunc(p, visit e a) :> _
+                    LExpr.FSharpFunc(p, visit e (a.Add(v, p))) :> _
 
                 | SpecificCall <@@ (|>) @@> (_, _, [Invert(arg, inner); Lambda(v, body)]) ->
                     visit body (a.Add(v, visit arg a)) |> replace arg inner
@@ -143,7 +124,7 @@ type Iso private () =
                             let gt = t.GetGenericTypeDefinition()
                             let reverse() =
                                 let oa = List.rev args
-                                let ga = ti.GenericTypeArguments
+                                let ga = ti.GetGenericArguments()
                                 gt.MakeGenericType(Array.rev ga), oa,
                                 oa |> List.map (fun a -> LExpr.Parameter((if a.Type = ga.[0] then ga.[1] else a.Type), a.Name))
 
@@ -179,7 +160,9 @@ type Iso private () =
                             LExpr.Constant(fun (c : char) -> c.ToString()), LExpr.Call(b, typeinfoof<string>.GetMethod("ToCharArray", [||]))),
                         // str.Split([| sepexpr |], StringSplitOptions.None)
                         LExpr.Call(b, typeinfoof<string>.GetMethod("Split", [| typeof<string[]>; typeof<StringSplitOptions> |]),
-                            LExpr.NewArrayInit(typeof<string>, sepexpr), LExpr.Constant(StringSplitOptions.None))) |> replace strs inner
+                            LExpr.NewArrayInit(typeof<string>, sepexpr), LExpr.Constant(StringSplitOptions.None))
+                    )
+                    |> replace strs inner
 
                 // Array ops:
                 #if !NETFX_CORE
@@ -193,15 +176,26 @@ type Iso private () =
                         ce <- LExpr.Call(typedefof<FSharpFunc<_,_>>.MakeGenericType(ce.Type.GetGenericArguments()).GetMethod("FromConverter"), ce)
                     #endif
                     LExpr.Call(
-                        ce.Type.GenericTypeArguments |> getGenericMethod <@@ Array.map @@>,
-                        ce, arrayexpr) |> replace array inner
+                        ce.Type.GetTypeInfo().GetGenericArguments() |> getGenericMethod <@@ Array.map @@>,
+                        ce, arrayexpr)
+                    |> replace array inner
 
                 // Easily invertible ops in the collections modules:
                 | SpecificCall <@@ Map.ofSeq @@> (_, _, [Invert(arg, inner)]) as call ->
-                    LExpr.Call(call.Type.GenericTypeArguments |> getGenericMethod <@@ Map.toSeq @@>, visit arg a) |> replace arg inner
+                    LExpr.Call(call.Type.GetTypeInfo().GetGenericArguments()
+                               |> getGenericMethod <@@ Map.toSeq @@>, visit arg a
+                    )
+                    |> replace arg inner
 
                 | other -> failwithf "Unsupported expr: %A" other
             let b = LExpr.Parameter(typeof<'b>)
-            let del = LExpr.Lambda<Func<'b,'a>>(visit body (Map.ofList [(arg, b :> LExpr)]), b).Compile()
+            let a = Map.ofList [(arg, b :> LExpr)]
+            let del = LExpr.Lambda<Func<'b,'a>>(visit body a, b).Compile()
             fn, del.Invoke
         | other -> failwithf "Cannot determine inverse for expr: %A" other
+
+/// A module of predefined `Iso`s
+module Isos =
+
+    /// An `Iso` mapping an option to a default value if None
+    let defaultTo defaultValue : Iso<_,_> = (function | Some(value) -> value | _ -> defaultValue), Some

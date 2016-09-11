@@ -8,12 +8,6 @@ open SharpBoomerang
 open SharpBoomerang.Combinators
 open SharpBoomerang.Tests.Iso
 
-type DU =
-    | DUStr of string
-    | DUFloat of float
-    | DUList of DU seq
-    | DUMap of Map<string,int>
-
 type Title =
     | Mr
     | Ms
