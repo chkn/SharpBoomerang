@@ -57,9 +57,15 @@
 <h3>Visual Studio</h3>
 <p>You'll need Visual Studio 2015 -- earlier versions will not work. Just load <code>SharpBoomerang.sln</code> and go!</p>
 <h3>Xamarin Studio</h3>
-<p>If you are using Mono, you'll need version 4.3.1 or newer (currently available in <a href="http://www.mono-project.com/download/beta/">beta</a>). Just load <code>SharpBoomerang.sln</code> in Xamarin Studio and go!</p>
+<p>If you are using Mono, you'll need version 4.3.1 or newer. Just load <code>SharpBoomerang.sln</code> in Xamarin Studio and go!</p>
 <h2>Docs</h2>
-<p>Documentation can be found in the <code>docs</code> directory, or <a href="http://chkn.github.io/SharpBoomerang/Introduction.html">online</a>. The HTML docs can be built by running <code>build.fsx</code>.</p>
+<p>Documentation can be found in the <code>docs</code> directory, or <a href="http://chkn.github.io/SharpBoomerang/docs/Introduction.html">online</a>. The HTML docs can be built like this:</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp">[<span class="i">Mac</span>] <span class="i">build</span><span class="o">.</span><span class="i">fsx</span> <span class="i">docs</span>
+</code></pre></td>
+</tr>
+</table>
 <h3>TL;DR</h3>
 <p>For those who are impatient, here are some samples that are more fully discussed in the docs.</p>
 <h4>Hello World</h4>
@@ -111,9 +117,18 @@
 </tr>
 </table>
 <h4>Parse JSON</h4>
-<p>See the full document <a href="http://chkn.github.io/SharpBoomerang/JSON.html">here</a>.</p>
+<p>See the full document <a href="http://chkn.github.io/SharpBoomerang/examples/JSON.html">here</a>.</p>
 <h2>Tests</h2>
 <p>The NUnit tests are under the <code>tests</code> directory. The tests should be runnable from the Unit Tests pad in Xamarin Studio or the Test Explorer in Visual Studio.</p>
+<h2>Building the NuGet Package</h2>
+<p>Sometimes it's helpful to build the NuGet package locally. To do this:</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp">[<span class="i">Mac</span>] <span class="i">build</span><span class="o">.</span><span class="i">fsx</span> <span class="i">nupkg</span>
+</code></pre></td>
+</tr>
+</table>
+<p>If you have not already built a Release build, the build will run as part of this command. Note that you'll need to have previously restored the NuGet packages otherwise it will fail.</p>
 <h2>Contributions, Feedback, etc.</h2>
 <p>All welcome! Feel free to file PRs or Issues. Also consider poking me on Twitter @chknofthescene, as I sometimes miss GitHub notifications.</p>
 
