@@ -41,7 +41,7 @@ Documentation can be found in the `docs` directory, or [online][3]. The HTML doc
     [Windows] build.cmd docs
     [Mac] build.fsx docs
 
-[3]: http://chkn.github.io/SharpBoomerang/Introduction.html
+[3]: http://chkn.github.io/SharpBoomerang/docs/Introduction.html
 
 ### TL;DR
 
@@ -81,7 +81,7 @@ For those who are impatient, here are some samples that are more fully discussed
 
 See the full document [here][4].
 
-[4]: http://chkn.github.io/SharpBoomerang/JSON.html
+[4]: http://chkn.github.io/SharpBoomerang/examples/JSON.html
 
 
 Tests
