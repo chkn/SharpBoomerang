@@ -67,6 +67,13 @@ let rec (|TupleDecompose|_|) = function
 | Let(v, TupleGet(t, _), body) -> Some (t, [v], body)
 | _ -> None
 
+// Functions of the form: fun (SomeUnion(arg1, arg2, ...)) -> ...
+// | UnionDecompose(union : Expr, args : Var list, body : Expr)
+let rec (|UnionDecompose|_|) = function
+| Let(v, PropertyGet(Some(t), _, _), UnionDecompose(t', args, body)) when t = t' -> Some (t, v :: args, body)
+| Let(v, PropertyGet(Some(t), _, _), body) when FSharpType.IsUnion(t.Type) -> Some (t, [v], body)
+| _ -> None
+
 // Matches constructs that logically take a tuple, e.g. tupling, DU creation, method call
 // | TupleCompose(target : Expr option, constructor : MethodBase, args : Expr list)
 let (|TupleCompose|_|) = function
@@ -126,7 +133,7 @@ let inline isConvertible t =
 
 type ExpressionFunc<'t,'r>(p, e) =
     inherit FSharpFunc<'t,'r>()
-    let func = lazy(LExpr.Lambda<Func<'t,'r>>(e, [| p |]).Compile())
+    let func = lazy(LExpr.Lambda<Func<'t,'r>>(e, p).Compile())
     override __.Invoke(arg) = func.Force().Invoke(arg)
 
 type Expression with
@@ -138,7 +145,7 @@ type Expression with
     static member FSharpFunc(p : ParameterExpression, e : Expression) =
         let funcType = typedefof<ExpressionFunc<_,_>>.MakeGenericType(p.Type, e.Type)
         let ctor = funcType.GetTypeInfo().GetConstructors() |> Seq.exactlyOne
-        LExpr.New(ctor, LExpr.Constant(p), LExpr.Constant(e))
+        LExpr.Constant(ctor.Invoke([| p; e |]))
 
     /// Expression representing the creation of a Tuple
     static member Tuple(tupleType : Type, items : Expression seq) : Expression =

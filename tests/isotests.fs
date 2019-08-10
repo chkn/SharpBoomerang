@@ -209,3 +209,17 @@ let ``implicit Iso of union single arg piped`` a b =
 let ``implicit Iso of union two args`` a b =
     Iso.ofFn(fun (f, s) -> DUFloatStr(f, s))
     |> forValues a b
+
+type SingleArg = SingleArg of string
+
+[<Property>]
+let ``implicit Iso of decomposing union single arg`` a b =
+    Iso.ofFn(fun (SingleArg s) -> s)
+    |> forValues a b
+
+type TwoArgs = TwoArgs of string * int
+
+[<Property>]
+let ``implicit Iso of decomposing union two args`` a b =
+    Iso.ofFn(fun (TwoArgs(s, i)) -> (s, i))
+    |> forValues a b

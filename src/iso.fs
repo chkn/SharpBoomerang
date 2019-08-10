@@ -30,26 +30,29 @@ type Iso =
     /// Given a simple function, `'a -> 'b`, attempts to derive the inverse implicitly
     // This method is a work in progress. We will add cases as they come up.
     static member ofFn([<ReflectedDefinition(true)>] expr : Expr<('a -> 'b)>) : Iso<_,_> =
+        // Call inversion
+        //  Given a chain of calls, A(B(C(d))) = d'
+        //    where A, B, and C are functions and d is some argument expression,
+        //  the inverse of that is C'(B'(A'(d'))) = d,
+        //    where A', B', and C' are the inverse functions of A, B, and C respectively.
+        // To achieve that, this function translates A(B(C(d))) -> [C; B; A; d] 
+        let rec invert lst = function
+        | SpecificCall <@@ (|>) @@> (_, _, [arg; _])
+
+        // 1 argument
+        | Call(_, _, [arg])
+        | NewUnionCase(_, [arg])
+
+        // 2 arguments
+        | Call(_, _, [_; arg])
+        | NewUnionCase(_, [_; arg]) as expr -> expr :: invert arg
+
+        | expr -> [expr]
+
         match expr with
         | WithValue(:? ('a -> 'b) as fn, _, expr) ->
             let rec visitAll exprs a = seq { for e in exprs do yield visit e a }
             and visit e (a : Map<Var,LExpr>) : LExpr =
-
-                /// Helper function generally used with the Invert active pattern
-                let replace expr inExpr withLExpr =
-                    match inExpr with
-                    | Some(e) ->
-                        let var, newExpr = match expr with
-                                           | Var(v) -> v, e
-                                           | _ ->
-                                                let var = Var("_", expr.Type)
-                                                let varExpr = Expr.Var(var)
-                                                var, e |> Expr.replace (function | x when x = expr -> Some varExpr | _ -> None)
-                        a
-                        |> Map.add var withLExpr
-                        |> visit newExpr
-                    | _ -> withLExpr
-
                 match e with
                 // Values:
                 | Var(v) -> a.[v]
@@ -81,8 +84,10 @@ type Iso =
                     let inverseArgs = visitAll args a |> Seq.toArray
                     let types = inverseArgs |> Array.map (fun a -> a.Type)
                     LExpr.Tuple(FSharpType.MakeTupleType(types), inverseArgs)
+
+                // Decomposition:
+                | UnionDecompose(t, args, (TupleCompose(_, _, exprs) as nt))
                 | TupleDecompose(t, args, (TupleCompose(_, _, exprs) as nt)) ->
-                    // The inverse of decomposing a tuple is creating a tuple
                     let inpts, a = (args, exprs)
                                    ||> Seq.map2 (fun v e -> v, LExpr.Parameter(e.Type, v.Name))
                                    |> Seq.mapFold (fun a (v, p) -> p, a |> Map.add v (p :> LExpr)) a
@@ -205,8 +210,8 @@ type Iso =
                     let del = LExpr.Lambda<Func<'b,'a>>(newBody, newArg).Compile()
                     fn, del.Invoke
                 | other -> failwithf "Cannot determine inverse for expr: %A" other
-            outerVisit expr Map.empty
 
+            outerVisit expr Map.empty
         | other -> failwithf "Impossible expr: %A" other
 
 /// A module of predefined `Iso`s
